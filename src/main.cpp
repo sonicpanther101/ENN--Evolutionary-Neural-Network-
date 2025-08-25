@@ -18,8 +18,6 @@
 #include <vector>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // settings
 const unsigned int SCR_WIDTH = 1200;
@@ -67,12 +65,7 @@ int main() {
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    // glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetScrollCallback(window, scroll_callback);
     glfwSwapInterval(0);
-
-    // tell GLFW to capture our mouse
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glew: load all OpenGL function pointers
     // ---------------------------------------
@@ -95,17 +88,84 @@ int main() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    std::vector<glm::vec3> positions = {
+        glm::vec3(-0.5f, 0.0f, -0.5f),
+        glm::vec3( 0.0f, 1.0f,  0.0f),
+        glm::vec3( 0.5f, 0.0f, -0.5f)
+    };
+
+    // build and compile our shader program
+    // ------------------------------------
+    Shader circleShader("../shaders/point_vertex.glsl", "../shaders/point_fragment.glsl");
+    Shader lineShader("../shaders/line_vertex.glsl", "../shaders/line_fragment.glsl");
+
+    circleShader.use();
+    circleShader.setVec3("color", glm::vec3(1.0f, 0.0f, 0.0f));
+
+    unsigned int billboardVAO, billboardVBO, circlesVBO, indexVBO;
+    const float quadVertices[] = {
+        // Positions
+        -0.5f,  0.5f,
+        -0.5f, -0.5f,
+        0.5f, -0.5f,
+        -0.5f,  0.5f,
+        0.5f, -0.5f,
+        0.5f,  0.5f
+    };
+
+    glGenVertexArrays(1, &billboardVAO);
+    glGenBuffers(1, &billboardVBO);
+    glGenBuffers(1, &circlesVBO);
+    glGenBuffers(1, &indexVBO);
+
+    glBindVertexArray(billboardVAO);
+
+    // Vertex buffer
+    glBindBuffer(GL_ARRAY_BUFFER, billboardVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    // Vertex attributes
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+
+    // Instance buffer
+    glBindBuffer(GL_ARRAY_BUFFER, circlesVBO);
+    glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glVertexAttribDivisor(1, 1);  // Update once per instance
+
+    glBindVertexArray(0);
+
+    // rendering cube lines
+    std::vector<unsigned int> lineIndices;
+    unsigned int linesVAO, linesVBO, linesEBO;
+    glGenVertexArrays(1, &linesVAO);
+    glGenBuffers(1, &linesVBO);
+    glGenBuffers(1, &linesEBO);
+
+    glBindVertexArray(linesVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, linesVBO);
+    glBufferData(GL_ARRAY_BUFFER, lineIndices.size() * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, linesEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, lineIndices.size() * sizeof(unsigned int), lineIndices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glBindVertexArray(0);
 
     // Imgui stuff
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-    #if defined(__linux__)
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    #else
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
-    #endif
+    // #if defined(__linux__)
+    //     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    // #else
+    //     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+    // #endif
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -121,6 +181,13 @@ int main() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // physicsSystem.GetParticlePositions(positions);
+
+        // Update instance data
+        glBindBuffer(GL_ARRAY_BUFFER, circlesVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(glm::vec3), positions.data());
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
         // render
         // ------
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -130,12 +197,38 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // render the scene
+
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
 
+        circleShader.setMat4("projection", projection);
+        circleShader.setMat4("view", view);
+
+        circleShader.use();
+
+        circleShader.setVec3("viewPos", camera.Position);
+        circleShader.setFloat("time", static_cast<float>(glfwGetTime()));
+
+        // Billboard-specific uniforms
+        circleShader.setVec3("cameraRight", camera.Right);
+        circleShader.setVec3("cameraUp", camera.Up);
+
+        // Draw billboards
+        glBindVertexArray(billboardVAO);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, positions.size());
+
+        // Lines
+        glLineWidth(4.0f); // Make lines thicker
+        lineShader.use();
+        lineShader.setMat4("projection", projection);
+        lineShader.setMat4("view", view);
+        glBindVertexArray(linesVAO);
+        glDrawElements(GL_LINES, lineIndices.size(), GL_UNSIGNED_INT, 0);
+
         // ImGui
-        ImGui::Begin("Changer");
+        ImGui::Begin("Control Panel");
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
 		ImGui::End();
 
@@ -172,28 +265,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-}
-
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
-
-    float xpos = static_cast<float>(xposIn);
-    float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
