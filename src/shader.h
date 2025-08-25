@@ -2,11 +2,13 @@
 
 #include <GL/glew.h>
 
+// GLM
+#include "../vendor/glm/glm/gtc/type_ptr.hpp"
+
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <filesystem>
 
 class Shader
 {
