@@ -14,6 +14,11 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
@@ -91,23 +96,21 @@ int main() {
 
     // Circle rendering setup
     unsigned int circleVAO, circleVBO, circleInstanceVBO;
-    const float circleVertices[] = {
-        // Triangle fan for circle (center + edge points)
-        0.0f,  0.0f,   // Center
-        1.0f,  0.0f,   // Right
-        0.866f, 0.5f,  // 
-        0.5f,  0.866f, //
-        0.0f,  1.0f,   // Top
-        -0.5f, 0.866f, //
-        -0.866f, 0.5f, //
-        -1.0f, 0.0f,   // Left
-        -0.866f, -0.5f,//
-        -0.5f, -0.866f,//
-        0.0f, -1.0f,   // Bottom
-        0.5f, -0.866f, //
-        0.866f, -0.5f, //
-        1.0f,  0.0f    // Back to right
-    };
+    
+    // Generate circle vertices using a loop for accuracy
+    const int circleSegments = 32; // Number of segments for smooth circle
+    std::vector<float> circleVertices;
+    
+    // Center vertex
+    circleVertices.push_back(0.0f); // x
+    circleVertices.push_back(0.0f); // y
+    
+    // Generate circle edge vertices
+    for (int i = 0; i <= circleSegments; ++i) {
+        float angle = 2.0f * M_PI * i / circleSegments;
+        circleVertices.push_back(cos(angle)); // x
+        circleVertices.push_back(sin(angle)); // y
+    }
 
     glGenVertexArrays(1, &circleVAO);
     glGenBuffers(1, &circleVBO);
@@ -117,7 +120,7 @@ int main() {
 
     // Vertex buffer for circle shape
     glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, circleVertices.size() * sizeof(float), circleVertices.data(), GL_STATIC_DRAW);
 
     // Vertex attributes for circle shape
     glEnableVertexAttribArray(0);
@@ -153,7 +156,7 @@ int main() {
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330 core");
+    ImGui_ImplOpenGL3_Init("#version 450 core");
 
     // render loop
     // -----------
@@ -192,7 +195,7 @@ int main() {
             if (wireframe) {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             }
-            glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 14, circlePositions.size());
+            glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, circleSegments + 2, circlePositions.size());
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
 
@@ -203,7 +206,7 @@ int main() {
             lineShader.setVec3("color", glm::vec3(0.3f, 1.0f, 0.3f));
             lineShader.setFloat("time", currentFrame);
 
-            glLineWidth(2.0f);
+            glLineWidth(4.0f);
             glBindVertexArray(lineVAO);
             glDrawArrays(GL_LINES, 0, linePoints.size());
         }
@@ -213,7 +216,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("2D Renderer Control Panel");
+        ImGui::Begin("Control Panel");
         ImGui::Text("FPS: %.1f", 1.0f / deltaTime);
         ImGui::Separator();
         
