@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../vendor/glm/glm/gtc/type_ptr.hpp" 
 #include "renderable.h"
 

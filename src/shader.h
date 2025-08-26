@@ -13,6 +13,12 @@
 class Shader
 {
 public:
+    // Check if file exists before reading
+    bool fileExists(const std::string& filename) {
+        std::ifstream file(filename);
+        return file.good();
+    }
+
     unsigned int ID;
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
@@ -26,6 +32,12 @@ public:
         vShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
         fShaderFile.exceptions (std::ifstream::failbit | std::ifstream::badbit);
         try  {
+            if (!fileExists(vertexPath)) {
+                std::cerr << "ERROR: Shader file not found: " << vertexPath << std::endl;
+            }
+            if (!fileExists(fragmentPath)) {
+                std::cerr << "ERROR: Shader file not found: " << fragmentPath << std::endl;
+            }
             // open files
             vShaderFile.open(vertexPath);
             fShaderFile.open(fragmentPath);
