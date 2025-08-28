@@ -1,11 +1,16 @@
 #include "gpu_physics.h"
 #include "window.h"
+#include "imgui_helper.h"
 #include <chrono>
 #include <iostream>
 
 int main() {
     // Initialize window
     Window window(800, 600, "GPU Physics 2D Renderer");
+
+    // Initialize Imgui
+    Imgui imgui;
+    imgui.Init(window.getGLFWwindow());
     
     // Check for compute shader support
     int work_group_count[3];
@@ -20,24 +25,31 @@ int main() {
     GPUPhysicsSystem physics_system(100, 2); // Start with fewer objects for testing
     GPURenderer2D renderer(800, 600);
     
-    // Create some bouncing triangles
+    // Create some bouncing balls
     for (int i = 0; i < 1; ++i) {
         GPUPhysicsObject ball = {};
         ball.position = {400.0f, 300.0f,0};
-        ball.velocity = {0.0f, 0.0f,0};
-        ball.acceleration = {0.0f, 0.0f,0}; // gravity
+        ball.velocity = {0.0f, 10.0f,0};
+        ball.acceleration = {0.0f, -98.0f,0}; // gravity
         ball.mass = 1.0f;
         
         physics_system.addObject(ball);
     }
     
     auto last_time = std::chrono::high_resolution_clock::now();
+
+    // Storage for physics data read back from GPU
+    std::vector<GPUPhysicsObject> physics_data;
     
     while (!window.shouldClose()) {
+        window.pollEvents();
+
+        imgui.NewFrame();
+
         // Calculate delta time
         auto current_time = std::chrono::high_resolution_clock::now();
-        float dt = 0.5f;
-        // float dt = std::chrono::duration<float>(current_time - last_time).count();
+        // float dt = 0.5f;
+        float dt = std::chrono::duration<float>(current_time - last_time).count();
         last_time = current_time;
         
         // Cap delta time to avoid large jumps
@@ -45,15 +57,25 @@ int main() {
         
         // Update physics on GPU
         physics_system.update(dt);
+
+        // Read back physics data for ImGui display
+        physics_data = physics_system.getObjectsData();
+
+        // Add elements to ImGui window
+        imgui.AddElements(physics_system, physics_data, dt);
         
         // Render directly from GPU buffers
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         renderer.render(physics_system);
+
+        imgui.Render();
         
         window.swapBuffers();
         window.pollEvents();
     }
+
+    imgui.Cleanup();
     
     return 0;
 }

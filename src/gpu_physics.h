@@ -24,6 +24,8 @@ public:
     
     void addObject(const GPUPhysicsObject& obj);
     void update(float dt);
+    void setIterations(int iterations);
+    std::vector<GPUPhysicsObject> getObjectsData();
     
     GLuint getDataBuffer() const { return data_buffer; }
     int getObjectCount() const { return object_count; }

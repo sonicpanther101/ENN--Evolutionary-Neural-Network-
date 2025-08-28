@@ -94,7 +94,7 @@ void GPUPhysicsSystem::update(float dt) {
     // Set uniforms
     glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
     glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), 800.0f, 600.0f);
-    glUniform1f(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
+    glUniform1i(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
     
     // Dispatch compute shader
     int work_groups = (object_count + 63) / 64;
@@ -240,4 +240,23 @@ GLuint GPURenderer2D::loadRenderShaders() {
     glDeleteShader(fragment_shader);
     
     return program;
+}
+
+std::vector<GPUPhysicsObject> GPUPhysicsSystem::getObjectsData() {
+    std::vector<GPUPhysicsObject> data(object_count);
+    
+    // Bind and read from GPU buffer
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, data_buffer);
+    GLvoid* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    if (ptr) {
+        memcpy(data.data(), ptr, object_count * sizeof(GPUPhysicsObject));
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    
+    return data;
+}
+
+void GPUPhysicsSystem::setIterations(int iterations) {
+    this->iterations = iterations;
 }
