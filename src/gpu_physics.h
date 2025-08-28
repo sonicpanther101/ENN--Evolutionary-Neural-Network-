@@ -1,4 +1,3 @@
-// src/gpu_physics.h
 #pragma once
 #include <GL/glew.h>
 #include <vector>
@@ -10,22 +9,17 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// GPU-aligned struct (std430 layout)
 struct GPUPhysicsObject {
-    glm::vec2 position;
-    glm::vec2 velocity;
-    glm::vec2 acceleration;
-    float radius;
-    glm::vec3 color;
-    int shape_type; // 0=line, 1=circle, 2=polygon
-    int sides;
-    glm::vec2 position2; // for lines
-    int filled;
-    float padding[3]; // align to 64 bytes
+    glm::vec3 position;     // 12 bytes
+    glm::vec3 velocity;     // 12 bytes
+    glm::vec3 acceleration; // 12 bytes
+    float mass;             // 4 bytes
 };
 
 class GPUPhysicsSystem {
 public:
-    GPUPhysicsSystem(int max_objects = 1000);
+    GPUPhysicsSystem(int max_objects = 1000, int iterations = 1);
     ~GPUPhysicsSystem();
     
     void addObject(const GPUPhysicsObject& obj);
@@ -39,6 +33,7 @@ private:
     GLuint data_buffer;
     
     int max_objects;
+    int iterations;
     int object_count;
     
     void setupBuffers();

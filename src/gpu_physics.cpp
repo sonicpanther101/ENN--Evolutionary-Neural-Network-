@@ -1,62 +1,12 @@
-// src/gpu_physics.cpp
 #include "gpu_physics.h"
 #include <iostream>
+#include <fstream>
 
-const char* compute_shader_source = R"(
-#version 430 core
+// Load the shader file
+std::ifstream shaderFile("../shaders/compute_shader.glsl");
+std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
+const char* compute_source = compute_shader_source.c_str();
 
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
-
-struct PhysicsObject {
-    vec2 position;
-    vec2 velocity;
-    vec2 acceleration;
-    float radius;
-    vec3 color;
-    int shape_type;
-    int sides;
-    vec2 position2;
-    int filled;
-    float padding[3];
-};
-
-layout(std430, binding = 0) restrict buffer ObjectBuffer {
-    PhysicsObject objects[];
-};
-
-uniform float u_deltaTime;
-uniform vec2 u_screenSize;
-
-void main() {
-    uint index = gl_GlobalInvocationID.x;
-    
-    if (index >= objects.length()) {
-        return;
-    }
-    
-    // Update velocity
-    objects[index].velocity += objects[index].acceleration * u_deltaTime;
-    
-    // Update position
-    objects[index].position += objects[index].velocity * u_deltaTime;
-    
-    // Boundary collision (simple bounce)
-    if (objects[index].position.x - objects[index].radius < 0.0 || objects[index].position.x + objects[index].radius > u_screenSize.x) {
-        objects[index].velocity.x *= -0.8; // damping
-        objects[index].position.x = clamp(objects[index].position.x, objects[index].radius, u_screenSize.x - objects[index].radius);
-    }
-    
-    if (objects[index].position.y - objects[index].radius < 0.0 || objects[index].position.y + objects[index].radius > u_screenSize.y) {
-        objects[index].velocity.y *= -0.8; // damping  
-        objects[index].position.y = clamp(objects[index].position.y, objects[index].radius, u_screenSize.y - objects[index].radius);
-    }
-    
-    // Update line endpoint if it's a line
-    if (objects[index].shape_type == 0) { // line
-        objects[index].position2 += objects[index].velocity * u_deltaTime;
-    }
-}
-)";
 
 const char* instanced_vertex_shader = R"(
 #version 430 core
@@ -67,13 +17,6 @@ struct PhysicsObject {
     vec2 position;
     vec2 velocity;
     vec2 acceleration;
-    float radius;
-    vec3 color;
-    int shape_type;
-    int sides;
-    vec2 position2;
-    int filled;
-    float padding[3];
 };
 
 layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
@@ -81,7 +24,6 @@ layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
 };
 
 uniform mat4 u_projection;
-uniform int u_max_vertices_per_shape;
 
 out vec3 v_color;
 
@@ -90,28 +32,11 @@ void main() {
     
     vec2 world_pos;
     
-    if (obj.shape_type == 2) { // polygon
-        // Only use the first 'sides' vertices for this polygon
-        if (gl_VertexID >= obj.sides) {
-            // Cull extra vertices by putting them off-screen
-            gl_Position = vec4(-10, -10, -10, 1);
-            v_color = vec3(0, 0, 0);
-            return;
-        }
-        
-        // Generate polygon vertex
-        float angle = 2.0 * 3.14159265359 * gl_VertexID / float(obj.sides);
-        vec2 poly_vertex = vec2(cos(angle), sin(angle));
-        world_pos = obj.position + poly_vertex * obj.radius;
-    } else if (obj.shape_type == 1) { // circle
-        // Use template position for circles (all 16 vertices)
-        world_pos = obj.position + template_pos * obj.radius;
-    } else { // lines or other shapes
-        world_pos = obj.position + template_pos * obj.radius;
-    }
+    // circle
+    world_pos = obj.position + template_pos * 20;
     
     gl_Position = u_projection * vec4(world_pos, 0.0, 1.0);
-    v_color = obj.color;
+    v_color = vec3(1.0);
 }
 )";
 
@@ -126,10 +51,10 @@ void main() {
 }
 )";
 
-GPUPhysicsSystem::GPUPhysicsSystem(int max_objects) 
-    : max_objects(max_objects), object_count(0) {
+GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int iterations) 
+    : max_objects(max_objects), iterations(iterations), object_count(0) {
     
-    compute_shader_program = loadComputeShader(compute_shader_source);
+    compute_shader_program = loadComputeShader(compute_source);
     setupBuffers();
 }
 
@@ -169,6 +94,7 @@ void GPUPhysicsSystem::update(float dt) {
     // Set uniforms
     glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
     glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), 800.0f, 600.0f);
+    glUniform1f(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
     
     // Dispatch compute shader
     int work_groups = (object_count + 63) / 64;
