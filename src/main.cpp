@@ -9,7 +9,7 @@ int main() {
     Window window(800, 600, "GPU Physics 2D Renderer");
 
     // Initialize Imgui
-    Imgui imgui;
+    ImguiHelper imgui;
     imgui.Init(window.getGLFWwindow());
     
     // Check for compute shader support
@@ -22,15 +22,15 @@ int main() {
               << work_group_count[1] << ", " << work_group_count[2] << std::endl;
     
     // Initialize GPU physics system
-    GPUPhysicsSystem physics_system(100, 2); // Start with fewer objects for testing
+    GPUPhysicsSystem physics_system(100, 1); // Start with fewer objects for testing
     GPURenderer2D renderer(800, 600);
     
     // Create some bouncing balls
     for (int i = 0; i < 1; ++i) {
         GPUPhysicsObject ball = {};
-        ball.position = {400.0f, 300.0f,0};
-        ball.velocity = {0.0f, 10.0f,0};
-        ball.acceleration = {0.0f, -98.0f,0}; // gravity
+        ball.position = {400.0f, 300.0f,0.0f};
+        ball.velocity = {0.0f, 10.0f,0.0f};
+        ball.acceleration = {0.0f, -100.0f,0.0f}; // gravity
         ball.mass = 1.0f;
         
         physics_system.addObject(ball);
@@ -62,7 +62,7 @@ int main() {
         physics_data = physics_system.getObjectsData();
 
         // Add elements to ImGui window
-        imgui.AddElements(physics_system, physics_data, dt);
+        imgui.AddElements(&physics_system, physics_data, dt);
         
         // Render directly from GPU buffers
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

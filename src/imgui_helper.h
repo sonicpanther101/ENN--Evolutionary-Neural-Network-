@@ -9,11 +9,11 @@
 
 #include "gpu_physics.h"
 
-class Imgui {
+class ImguiHelper {
 public:
     void Init(GLFWwindow* window);
     void NewFrame();
     void Render();
-    void AddElements(GPUPhysicsSystem physics_system, std::vector<GPUPhysicsObject> physics_data, float dt);
+    void AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUPhysicsObject> physics_data, float dt);
     void Cleanup();
 };

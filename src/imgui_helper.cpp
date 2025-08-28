@@ -1,6 +1,6 @@
 #include "imgui_helper.h"
 
-void Imgui::Init(GLFWwindow* window) {
+void ImguiHelper::Init(GLFWwindow* window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -15,23 +15,24 @@ void Imgui::Init(GLFWwindow* window) {
     ImGui_ImplOpenGL3_Init("#version 130");
 }
 
-void Imgui::NewFrame() {
+void ImguiHelper::NewFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-void Imgui::Render() {
+void ImguiHelper::Render() {
     // Render ImGui
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void Imgui::AddElements(GPUPhysicsSystem physics_system, std::vector<GPUPhysicsObject> physics_data, float dt) {
+void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUPhysicsObject> physics_data, float dt) {
     // Create ImGui window for physics tracking
     ImGui::Begin("Physics Object Tracker");
     
     ImGui::Text("Delta Time: %.3f ms", dt * 1000.0f);
+    ImGui::Text("FPS: %.0f", 1/dt);
     ImGui::Text("Number of Objects: %zu", physics_data.size());
     ImGui::Separator();
     
@@ -111,9 +112,9 @@ void Imgui::AddElements(GPUPhysicsSystem physics_system, std::vector<GPUPhysicsO
     ImGui::Separator();
     ImGui::Text("Controls:");
     
-    static int iterations = 2;
-    if (ImGui::SliderInt("Iterations", &iterations, 1, 10)) {
-        physics_system.setIterations(iterations);
+    static int iterations = 1;
+    if (ImGui::SliderInt("Iterations", &iterations, 1, 100)) {
+        physics_system->setIterations(iterations);
     }
     
     if (ImGui::Button("Reset Objects")) {
@@ -123,14 +124,14 @@ void Imgui::AddElements(GPUPhysicsSystem physics_system, std::vector<GPUPhysicsO
             ball.velocity = {(i - 1) * 100.0f, (i - 1) * 80.0f, 0};
             ball.acceleration = {0.0f, 300.0f, 0};
             ball.mass = 1.0f + i * 0.5f;
-            physics_system.addObject(ball);
+            physics_system->addObject(ball);
         }
     }
     
     ImGui::End();
 }
 
-void Imgui::Cleanup() {
+void ImguiHelper::Cleanup() {
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

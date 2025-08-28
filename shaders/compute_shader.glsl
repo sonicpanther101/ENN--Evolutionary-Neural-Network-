@@ -13,12 +13,12 @@ layout(std430, binding = 0) restrict buffer ObjectBuffer {
     PhysicsObject objects[];
 };
 
-uniform float u_deltaTime;
-uniform int u_iterations;
-uniform vec2 u_screenSize;
+layout(location = 0) uniform float u_deltaTime;
+layout(location = 1) uniform int u_iterations;
+layout(location = 2) uniform vec2 u_screenSize;
 
 void main() {
-    uint index = gl_GlobalInvocationID.x;
+    uint index = uint(gl_GlobalInvocationID.x);
     
     if (index >= objects.length()) {
         return;
@@ -27,6 +27,9 @@ void main() {
     // For point objects - mass matrix M_i
     float mass = objects[index].mass;
     mat3 M_i = mass * mat3(1.0);
+
+    if (u_deltaTime <= 0.0) return;   // prevent div by zero
+    if (mass <= 0.0) return;          // skip invalid mass
     
     // 3. Calculate new position/y
     vec3 y = objects[index].position + u_deltaTime * objects[index].velocity + u_deltaTime * u_deltaTime * objects[index].acceleration;

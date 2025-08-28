@@ -14,9 +14,10 @@ const char* instanced_vertex_shader = R"(
 layout(location = 0) in vec2 template_pos;
 
 struct PhysicsObject {
-    vec2 position;
-    vec2 velocity;
-    vec2 acceleration;
+    vec3 position;
+    vec3 velocity;
+    vec3 acceleration;
+    float mass;
 };
 
 layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
@@ -33,7 +34,7 @@ void main() {
     vec2 world_pos;
     
     // circle
-    world_pos = obj.position + template_pos * 20;
+    world_pos = obj.position.xy + template_pos * 20;
     
     gl_Position = u_projection * vec4(world_pos, 0.0, 1.0);
     v_color = vec3(1.0);
