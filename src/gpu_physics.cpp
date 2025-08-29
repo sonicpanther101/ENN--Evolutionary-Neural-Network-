@@ -3,7 +3,7 @@
 #include <fstream>
 
 // Load the shader file
-std::ifstream shaderFile("../shaders/old_compute_shader.glsl");
+std::ifstream shaderFile("../shaders/compute_shader.glsl");
 std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
 const char* compute_source = compute_shader_source.c_str();
 
