@@ -18,6 +18,7 @@ struct PhysicsObject {
     vec4 velocity;
     vec4 acceleration;
     float mass;
+    float radius;
 };
 
 layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
@@ -34,7 +35,7 @@ void main() {
     vec2 world_pos;
     
     // circle
-    world_pos = obj.position.xy + template_pos * 20;
+    world_pos = obj.position.xy + template_pos * obj.radius;
     
     gl_Position = u_projection * vec4(world_pos, 0.0, 1.0);
     v_color = vec3(1.0);
@@ -52,8 +53,8 @@ void main() {
 }
 )";
 
-GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int iterations) 
-    : max_objects(max_objects), iterations(iterations), object_count(0) {
+GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
+    : max_objects(max_objects), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0) {
     
     compute_shader_program = loadComputeShader(compute_source);
     setupBuffers();
@@ -94,7 +95,7 @@ void GPUPhysicsSystem::update(float dt) {
     
     // Set uniforms
     glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
-    glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), 800.0f, 600.0f);
+    glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
     glUniform1i(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
     
     // Dispatch compute shader

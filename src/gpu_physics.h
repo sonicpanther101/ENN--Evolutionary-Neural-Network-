@@ -15,11 +15,12 @@ struct GPUPhysicsObject {
     glm::vec4 velocity;     // 16 bytes
     glm::vec4 acceleration; // 16 bytes
     float mass;             // 4 bytes
+    float radius;           // 4 bytes
 };
 
 class GPUPhysicsSystem {
 public:
-    GPUPhysicsSystem(int max_objects = 1000, int iterations = 1);
+    GPUPhysicsSystem(int max_objects = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
     ~GPUPhysicsSystem();
     
     void addObject(const GPUPhysicsObject& obj);
@@ -37,6 +38,7 @@ private:
     int max_objects;
     int iterations;
     int object_count;
+    int SCREEN_WIDTH, SCREEN_HEIGHT;
     
     void setupBuffers();
     GLuint loadComputeShader(const char* compute_source);

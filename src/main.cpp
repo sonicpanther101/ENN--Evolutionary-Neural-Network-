@@ -4,9 +4,12 @@
 #include <chrono>
 #include <iostream>
 
+const int SCREEN_WIDTH = 1600;
+const int SCREEN_HEIGHT = 1200;
+
 int main() {
     // Initialize window
-    Window window(800, 600, "GPU Physics 2D Renderer");
+    Window window(SCREEN_WIDTH, SCREEN_HEIGHT, "GPU Physics 2D Renderer");
 
     // Initialize Imgui
     ImguiHelper imgui;
@@ -22,19 +25,30 @@ int main() {
               << work_group_count[1] << ", " << work_group_count[2] << std::endl;
     
     // Initialize GPU physics system
-    GPUPhysicsSystem physics_system(100, 1); // Start with fewer objects for testing
-    GPURenderer2D renderer(800, 600);
+    GPUPhysicsSystem physics_system(100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
+    GPURenderer2D renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     
     // Create some bouncing balls
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 1; ++i) {
         GPUPhysicsObject ball = {};
-        ball.position = {400.0f, 300.0f, 0.0f, 0.0f};
-        ball.velocity = {100.0f+0.1*i, 0.0f, 0.0f, 0.0f};
+        ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
+        ball.velocity = {0.0f, 100.0f, 0.0f, 0.0f};
         ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
         ball.mass = 1.0f;
+        ball.radius = 20.0f;
         
         physics_system.addObject(ball);
     }
+
+    // Ball showing correct path
+    GPUPhysicsObject ball = {};
+    ball.position = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 0.0f};
+    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
+    ball.acceleration = {0.0f, 0.0f, 0.0f, 0.0f}; // gravity
+    ball.mass = 1.0f;
+    ball.radius = SCREEN_HEIGHT/4.0f;
+    
+    physics_system.addObject(ball);
     
     auto last_time = std::chrono::high_resolution_clock::now();
 

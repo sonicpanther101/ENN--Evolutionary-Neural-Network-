@@ -19,6 +19,7 @@ public:
     void AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUPhysicsObject> physics_data, float dt);
     void Cleanup();
 private:
+    glm::vec3 past_velocity = {0.0f, 0.0f, 0.0f};
     std::deque<float> kinetic_energy_history;
     std::deque<float> time_history;
     const size_t max_history_points = 10000;
