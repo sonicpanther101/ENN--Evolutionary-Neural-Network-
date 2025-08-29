@@ -21,5 +21,5 @@ public:
 private:
     std::deque<float> kinetic_energy_history;
     std::deque<float> time_history;
-    const size_t max_history_points = 1000;
+    const size_t max_history_points = 10000;
 };

@@ -26,10 +26,10 @@ int main() {
     GPURenderer2D renderer(800, 600);
     
     // Create some bouncing balls
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         GPUPhysicsObject ball = {};
         ball.position = {400.0f, 300.0f, 0.0f, 0.0f};
-        ball.velocity = {100.0f, 0.0f, 0.0f, 0.0f};
+        ball.velocity = {100.0f+0.1*i, 0.0f, 0.0f, 0.0f};
         ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
         ball.mass = 1.0f;
         
