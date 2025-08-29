@@ -53,47 +53,47 @@ void main() {
         // This is where you would iterate over springs, constraints, contacts, etc.
         // For now, we'll add simple boundary forces as an example
         
-        // // Simple boundary constraint forces (keep objects within screen bounds)
-        // float boundary_stiffness = 1000.0;
+        // Simple boundary constraint forces (keep objects within screen bounds)
+        float boundary_stiffness = 1000.0;
         
-        // // Left boundary
-        // if (currentX.x < 50.0) {
-        //     float constraint_error = currentX.x - 50.0;
-        //     vec3 constraint_gradient = vec3(1.0, 0.0, 0.0);
+        // Left boundary
+        if (currentX.x < 25.0) {
+            float constraint_error = currentX.x - 25.0;
+            vec3 constraint_gradient = vec3(1.0, 0.0, 0.0);
             
-        //     // Add constraint force (f_ij = -k * C_j * grad_C_j)
-        //     f_i += -boundary_stiffness * constraint_error * constraint_gradient;
+            // Add constraint force (f_ij = -k * C_j * grad_C_j)
+            f_i += -boundary_stiffness * constraint_error * constraint_gradient;
             
-        //     // Add to Hessian (H_ij = k * grad_C_j * grad_C_j^T)
-        //     H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
-        // }
+            // Add to Hessian (H_ij = k * grad_C_j * grad_C_j^T)
+            H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
+        }
         
-        // // Right boundary
-        // if (currentX.x > u_screenSize.x - 50.0) {
-        //     float constraint_error = currentX.x - (u_screenSize.x - 50.0);
-        //     vec3 constraint_gradient = vec3(1.0, 0.0, 0.0);
+        // Right boundary
+        if (currentX.x > u_screenSize.x - 25.0) {
+            float constraint_error = currentX.x - (u_screenSize.x - 25.0);
+            vec3 constraint_gradient = vec3(1.0, 0.0, 0.0);
             
-        //     f_i += -boundary_stiffness * constraint_error * constraint_gradient;
-        //     H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
-        // }
+            f_i += -boundary_stiffness * constraint_error * constraint_gradient;
+            H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
+        }
         
-        // // Top boundary
-        // if (currentX.y < 50.0) {
-        //     float constraint_error = currentX.y - 50.0;
-        //     vec3 constraint_gradient = vec3(0.0, 1.0, 0.0);
+        // Top boundary
+        if (currentX.y < 25.0) {
+            float constraint_error = currentX.y - 25.0;
+            vec3 constraint_gradient = vec3(0.0, 1.0, 0.0);
             
-        //     f_i += -boundary_stiffness * constraint_error * constraint_gradient;
-        //     H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
-        // }
+            f_i += -boundary_stiffness * constraint_error * constraint_gradient;
+            H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
+        }
         
-        // // Bottom boundary
-        // if (currentX.y > u_screenSize.y - 50.0) {
-        //     float constraint_error = currentX.y - (u_screenSize.y - 50.0);
-        //     vec3 constraint_gradient = vec3(0.0, 1.0, 0.0);
+        // Bottom boundary
+        if (currentX.y > u_screenSize.y - 25.0) {
+            float constraint_error = currentX.y - (u_screenSize.y - 25.0);
+            vec3 constraint_gradient = vec3(0.0, 1.0, 0.0);
             
-        //     f_i += -boundary_stiffness * constraint_error * constraint_gradient;
-        //     H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
-        // }
+            f_i += -boundary_stiffness * constraint_error * constraint_gradient;
+            H_i += boundary_stiffness * outerProduct(constraint_gradient, constraint_gradient);
+        }
 
         // 20. Apply force to objects position
         vec3 delta_x_i = inverse(H_i) * f_i;

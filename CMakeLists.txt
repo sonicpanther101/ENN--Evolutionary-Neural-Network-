@@ -55,6 +55,12 @@ file(GLOB IMGUI_FILE_DIALOG_SOURCE "${IMGUI_FILE_DIALOG_DIR}/*.cpp" "${IMGUI_FIL
 
 add_library(imguiFileDialog ${IMGUI_FILE_DIALOG_SOURCE})
 
+add_library(implot STATIC
+    vendor/implot/implot.cpp
+    vendor/implot/implot_items.cpp
+    vendor/implot/implot_demo.cpp
+)
+
 file(GLOB SOURCES "src/*.cpp" "src/*.h")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -67,10 +73,11 @@ target_link_libraries(
     glfw 
     imgui 
     imguiFileDialog
+    implot
 )
 
 # Link the headers
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src vendor/implot)
 
 # print_all_variables()
 

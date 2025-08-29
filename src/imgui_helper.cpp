@@ -1,9 +1,12 @@
 #include "imgui_helper.h"
+#define IMPLOT_IMPLEMENTATION
+#include "../vendor/implot/implot.h"
 
 void ImguiHelper::Init(GLFWwindow* window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     
@@ -35,6 +38,65 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     ImGui::Text("FPS: %.0f", 1/dt);
     ImGui::Text("Number of Objects: %zu", physics_data.size());
     ImGui::Separator();
+    
+    // Calculate total kinetic energy for this frame
+    float total_kinetic_energy = 0.0f;
+    for (const auto& obj : physics_data) {
+        total_kinetic_energy += 0.5f * obj.mass * 
+            (obj.velocity.x * obj.velocity.x + 
+             obj.velocity.y * obj.velocity.y + 
+             obj.velocity.z * obj.velocity.z);
+    }
+    
+    // Update history buffers
+    static float accumulated_time = 0.0f;
+    accumulated_time += dt;
+    
+    kinetic_energy_history.push_back(total_kinetic_energy);
+    time_history.push_back(accumulated_time);
+    
+    // Keep history within bounds
+    if (kinetic_energy_history.size() > max_history_points) {
+        kinetic_energy_history.pop_front();
+        time_history.pop_front();
+    }
+    
+    // Display current kinetic energy
+    ImGui::Text("Total Kinetic Energy: %.3f J", total_kinetic_energy);
+    
+    // Kinetic Energy Plot
+    if (ImGui::CollapsingHeader("Kinetic Energy Graph", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Convert deques to vectors for plotting (since deques don't have .data())
+        std::vector<float> time_vec(time_history.begin(), time_history.end());
+        std::vector<float> energy_vec(kinetic_energy_history.begin(), kinetic_energy_history.end());
+        
+        if (ImPlot::BeginPlot("Kinetic Energy Over Time")) {
+            ImPlot::SetupAxes("Time (s)", "Energy (J)");
+            ImPlot::SetupAxisLimits(ImAxis_X1, accumulated_time - 10.0f, accumulated_time, ImGuiCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0, total_kinetic_energy * 1.5f, ImGuiCond_Once);
+            
+            ImPlot::PlotLine("Total Kinetic Energy", 
+                            time_vec.data(), 
+                            energy_vec.data(), 
+                            time_vec.size());
+            
+            ImPlot::EndPlot();
+        }
+        
+        // Plot controls
+        static bool auto_fit = true;
+        ImGui::Checkbox("Auto-scale Y", &auto_fit);
+        if (auto_fit) {
+            ImPlot::SetNextAxesToFit();
+        }
+        
+        ImGui::SameLine();
+        if (ImGui::Button("Clear Data")) {
+            kinetic_energy_history.clear();
+            time_history.clear();
+            accumulated_time = 0.0f;
+        }
+    }
     
     // Create a table for better organization
     if (ImGui::BeginTable("PhysicsObjects", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
@@ -97,11 +159,11 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
             
             ImGui::Text("Mass: %.3f", obj.mass);
             
-            // Kinetic energy calculation
+            // Individual object kinetic energy
             float kinetic_energy = 0.5f * obj.mass * 
                 (obj.velocity.x * obj.velocity.x + 
-                    obj.velocity.y * obj.velocity.y + 
-                    obj.velocity.z * obj.velocity.z);
+                 obj.velocity.y * obj.velocity.y + 
+                 obj.velocity.z * obj.velocity.z);
             ImGui::Text("Kinetic Energy: %.3f", kinetic_energy);
             
             ImGui::TreePop();
@@ -136,4 +198,5 @@ void ImguiHelper::Cleanup() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    ImPlot::DestroyContext();
 }
