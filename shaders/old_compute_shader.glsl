@@ -3,9 +3,10 @@
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 struct PhysicsObject {
-    vec3 position;
-    vec3 velocity;
-    vec3 acceleration;
+    vec4 position;
+    vec4 velocity;
+    vec4 acceleration;
+    float mass;
 };
 
 layout(std430, binding = 0) restrict buffer ObjectBuffer {

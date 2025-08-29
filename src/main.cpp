@@ -28,9 +28,9 @@ int main() {
     // Create some bouncing balls
     for (int i = 0; i < 1; ++i) {
         GPUPhysicsObject ball = {};
-        ball.position = {400.0f, 300.0f,0.0f};
-        ball.velocity = {0.0f, 10.0f,0.0f};
-        ball.acceleration = {0.0f, -100.0f,0.0f}; // gravity
+        ball.position = {400.0f, 300.0f, 0.0f, 0.0f};
+        ball.velocity = {100.0f, 0.0f, 0.0f, 0.0f};
+        ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
         ball.mass = 1.0f;
         
         physics_system.addObject(ball);

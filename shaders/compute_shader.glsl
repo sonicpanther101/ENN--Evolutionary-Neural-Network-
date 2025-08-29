@@ -3,9 +3,9 @@
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 struct PhysicsObject {
-    vec3 position;
-    vec3 velocity;
-    vec3 acceleration;
+    vec4 position;
+    vec4 velocity;
+    vec4 acceleration;
     float mass;
 };
 
@@ -32,12 +32,12 @@ void main() {
     if (mass <= 0.0) return;          // skip invalid mass
     
     // 3. Calculate new position/y
-    vec3 y = objects[index].position + u_deltaTime * objects[index].velocity + u_deltaTime * u_deltaTime * objects[index].acceleration;
+    vec3 y = (objects[index].position + u_deltaTime * objects[index].velocity + u_deltaTime * u_deltaTime * objects[index].acceleration).xyz;
 
     // Store previous position
-    vec3 initialX = objects[index].position;
+    vec3 initialX = objects[index].position.xyz;
     // Store current position
-    vec3 currentX = objects[index].position;
+    vec3 currentX = objects[index].position.xyz;
 
     // 7. Iterate n times
     for (int i = 0; i < u_iterations; i++) {
@@ -101,8 +101,8 @@ void main() {
     }
 
     // Store new position
-    objects[index].position = currentX;
+    objects[index].position = vec4(currentX, 1.0);
 
     // 37. Update velocity
-    objects[index].velocity = (objects[index].position - initialX) / u_deltaTime;
+    objects[index].velocity = vec4((objects[index].position.xyz - initialX) / u_deltaTime, 0.0);
 }

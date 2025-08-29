@@ -3,7 +3,7 @@
 #include <fstream>
 
 // Load the shader file
-std::ifstream shaderFile("../shaders/compute_shader.glsl");
+std::ifstream shaderFile("../shaders/old_compute_shader.glsl");
 std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
 const char* compute_source = compute_shader_source.c_str();
 
@@ -14,9 +14,9 @@ const char* instanced_vertex_shader = R"(
 layout(location = 0) in vec2 template_pos;
 
 struct PhysicsObject {
-    vec3 position;
-    vec3 velocity;
-    vec3 acceleration;
+    vec4 position;
+    vec4 velocity;
+    vec4 acceleration;
     float mass;
 };
 

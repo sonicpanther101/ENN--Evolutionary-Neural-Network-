@@ -11,9 +11,9 @@
 
 // GPU-aligned struct (std430 layout)
 struct GPUPhysicsObject {
-    glm::vec3 position;     // 12 bytes
-    glm::vec3 velocity;     // 12 bytes
-    glm::vec3 acceleration; // 12 bytes
+    glm::vec4 position;     // 16 bytes
+    glm::vec4 velocity;     // 16 bytes
+    glm::vec4 acceleration; // 16 bytes
     float mass;             // 4 bytes
 };
 
