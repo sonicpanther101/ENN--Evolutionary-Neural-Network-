@@ -11,6 +11,7 @@ struct PhysicsObject {
 };
 
 struct Constraint {
+    int type;
     int indexA;
     int indexB;
     float restLength;
@@ -38,12 +39,12 @@ float DistanceConstraint(vec3 X) {
 void main() {
     uint index = uint(gl_GlobalInvocationID.x);
     
-    if (index >= objects.length()) return;
+    if (index >= objects.length() || index == 2) return;
 
     // Initialize constraint variables
     float lambda = 0.0;
-    float lambda_min = 0.0;
-    // float lambda_max = 100.0;
+    // float lambda_min = 0.0; // paper says to set as 0 but that doesn't work
+    // float lambda_max = 100.0; // paper says to set to infinity
     float stiffness = 1.0;
     float beta = 10.0;
 
@@ -77,7 +78,7 @@ void main() {
             // force of the constraint
             float constraint_force = stiffness * currentDistance + lambda;
             // clamping values and adding the direction of the constraint
-            force -= max(constraint_force, lambda_min) * constraint_gradient;
+            force -= constraint_force * constraint_gradient;
 
             // 18. Update the local hessian matrix missing geometric stiffness matrix
             LocalHessian += stiffness * outerProduct(constraint_gradient, constraint_gradient);
@@ -91,12 +92,12 @@ void main() {
             currentX += delta_x_i;
 
             // 28. Update lambda
-            lambda = max(constraint_force, lambda_min);
+            lambda = constraint_force; // max(constraint_force, lambda_min);
             // 29. Check lambda against bounds
-            if (lambda_min < lambda) {
+            // if (lambda_min < lambda) {
                 // 30. Update stiffness
                 stiffness += beta * abs(stiffness * currentDistance + lambda);
-            }
+            // }
 
             // 23. Update position
             if (any(isnan(currentX))) {

@@ -61,14 +61,19 @@ GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int iterations, int SCREEN_W
 }
 
 GPUPhysicsSystem::~GPUPhysicsSystem() {
-    glDeleteBuffers(1, &data_buffer);
+    glDeleteBuffers(1, &object_data_buffer);
+    glDeleteBuffers(1, &constraint_data_buffer);
     glDeleteProgram(compute_shader_program);
 }
 
 void GPUPhysicsSystem::setupBuffers() {
     // Single buffer for all object data
-    glGenBuffers(1, &data_buffer);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, data_buffer);
+    glGenBuffers(1, &object_data_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, max_objects * sizeof(GPUPhysicsObject), nullptr, GL_DYNAMIC_DRAW);
+
+    glGenBuffers(1, &constraint_data_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, max_objects * sizeof(GPUPhysicsObject), nullptr, GL_DYNAMIC_DRAW);
 }
 
@@ -76,7 +81,7 @@ void GPUPhysicsSystem::addObject(const GPUPhysicsObject& obj) {
     if (object_count >= max_objects) return;
     
     // Upload entire object to buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, data_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 
                     object_count * sizeof(GPUPhysicsObject), 
                     sizeof(GPUPhysicsObject), 
@@ -85,13 +90,27 @@ void GPUPhysicsSystem::addObject(const GPUPhysicsObject& obj) {
     object_count++;
 }
 
+void GPUPhysicsSystem::addConstraint(const GPUPhysicsConstraint& constraint) {
+    if (constraint_count >= max_constraints) return;
+    
+    // Upload entire constraint to buffer
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 
+                    constraint_count * sizeof(GPUPhysicsObject), 
+                    sizeof(GPUPhysicsConstraint), 
+                    &constraint);
+    
+    constraint_count++;
+}
+
 void GPUPhysicsSystem::update(float dt) {
     if (object_count == 0) return;
     
     glUseProgram(compute_shader_program);
     
     // Bind single buffer
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, data_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, object_data_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, constraint_data_buffer);
     
     // Set uniforms
     glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
@@ -248,7 +267,7 @@ std::vector<GPUPhysicsObject> GPUPhysicsSystem::getObjectsData() {
     std::vector<GPUPhysicsObject> data(object_count);
     
     // Bind and read from GPU buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, data_buffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
     GLvoid* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
     if (ptr) {
         memcpy(data.data(), ptr, object_count * sizeof(GPUPhysicsObject));

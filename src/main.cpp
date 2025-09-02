@@ -40,7 +40,7 @@ int main() {
 
     ball = {};
     ball.position = {SCREEN_WIDTH/2.0f, 3.0f*SCREEN_HEIGHT/4.0f, 0.0f, 0.0f};
-    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
+    ball.velocity = {1.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
@@ -56,6 +56,15 @@ int main() {
     ball.radius = SCREEN_HEIGHT/4.0f;
     
     physics_system.addObject(ball);
+
+    GPUPhysicsConstraint constraint = {};
+    constraint.type = 0;
+    constraint.indexA = 0;
+    constraint.indexB = 1;
+    constraint.restLength = 100.0f;
+    constraint.stiffness = 1.0f;
+    
+    physics_system.addConstraint(constraint);
     
     auto last_time = std::chrono::high_resolution_clock::now();
 

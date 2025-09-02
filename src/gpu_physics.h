@@ -16,9 +16,19 @@ struct GPUPhysicsObject {
     glm::vec4 acceleration; // 16 bytes
     float mass;             // 4 bytes
     float radius;           // 4 bytes
-    float _pad1;            // 4 bytes
-    float _pad2;            // 4 bytes  
+    glm::vec2 _pad;        // 8 bytes 
 }; // 64 bytes it must be a multiple of 16 bytes
+
+struct GPUPhysicsConstraint {
+    int type;
+    int indexA;
+    int indexB;
+    float restLength;
+    float stiffness; // k_j^(n)
+    float lambda; // λ_j^(n)
+    glm::vec2 _pad;
+    // Could also add min/max bounds for inequality constraints
+}; // 32 bytes
 
 const int circle_segments = 64;
 
@@ -28,20 +38,24 @@ public:
     ~GPUPhysicsSystem();
     
     void addObject(const GPUPhysicsObject& obj);
+    void addConstraint(const GPUPhysicsConstraint& constraint);
     void update(float dt);
     void setIterations(int iterations);
     std::vector<GPUPhysicsObject> getObjectsData();
     
-    GLuint getDataBuffer() const { return data_buffer; }
+    GLuint getDataBuffer() const { return object_data_buffer; }
     int getObjectCount() const { return object_count; }
 
 private:
     GLuint compute_shader_program;
-    GLuint data_buffer;
+    GLuint object_data_buffer;
+    GLuint constraint_data_buffer;
     
     int max_objects;
+    int max_constraints;
     int iterations;
     int object_count;
+    int constraint_count;
     int SCREEN_WIDTH, SCREEN_HEIGHT;
     
     void setupBuffers();
