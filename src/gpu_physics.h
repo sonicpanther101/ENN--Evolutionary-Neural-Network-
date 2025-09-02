@@ -16,7 +16,11 @@ struct GPUPhysicsObject {
     glm::vec4 acceleration; // 16 bytes
     float mass;             // 4 bytes
     float radius;           // 4 bytes
-};
+    float _pad1;            // 4 bytes
+    float _pad2;            // 4 bytes  
+}; // 64 bytes it must be a multiple of 16 bytes
+
+const int circle_segments = 64;
 
 class GPUPhysicsSystem {
 public:

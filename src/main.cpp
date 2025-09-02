@@ -31,7 +31,7 @@ int main() {
     // Create some balls
     GPUPhysicsObject ball = {};
     ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
-    ball.velocity = {0.0f, 100.0f, 0.0f, 0.0f};
+    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
@@ -39,8 +39,8 @@ int main() {
     physics_system.addObject(ball);
 
     ball = {};
-    ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4.0f*cos(M_PI/4.0f), SCREEN_HEIGHT/2.0f*sin(M_PI/4.0f), 0.0f, 0.0f};
-    ball.velocity = {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
+    ball.position = {SCREEN_WIDTH/2.0f, 3.0f*SCREEN_HEIGHT/4.0f, 0.0f, 0.0f};
+    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
@@ -53,7 +53,7 @@ int main() {
     ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, 0.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
-    ball.radius = 20.0f; //SCREEN_HEIGHT/4.0f;
+    ball.radius = SCREEN_HEIGHT/4.0f;
     
     physics_system.addObject(ball);
     

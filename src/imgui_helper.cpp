@@ -15,7 +15,7 @@ void ImguiHelper::Init(GLFWwindow* window) {
     
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 130");
+    ImGui_ImplOpenGL3_Init("#version 430");
 }
 
 void ImguiHelper::NewFrame() {
@@ -43,7 +43,7 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     float total_kinetic_energy = 0.0f;
     float total_potential_energy = 0.0f;
     for (const auto& obj : physics_data) {
-        total_potential_energy -= obj.mass * obj.acceleration.y * obj.position.y;
+        total_potential_energy -= obj.mass * obj.acceleration.y * (obj.position.y - 300.0f);
         total_kinetic_energy += 0.5f * obj.mass * 
             (obj.velocity.x * obj.velocity.x + 
              obj.velocity.y * obj.velocity.y + 
@@ -102,7 +102,7 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
         if (ImPlot::BeginPlot("Kinetic Energy Over Time")) {
             ImPlot::SetupAxes("Time (s)", "Energy (J)");
             ImPlot::SetupAxisLimits(ImAxis_X1, 0.0f, accumulated_time, ImGuiCond_Always);
-            ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0f, 70000.0f, ImGuiCond_Once);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0f, *std::max_element(total_energy.begin(), total_energy.end()), ImGuiCond_Always);
             
             ImPlot::PlotLine("Total Kinetic Energy", 
                             time_vec.data(), 

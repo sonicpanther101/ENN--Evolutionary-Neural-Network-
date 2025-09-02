@@ -16,7 +16,7 @@ layout(location = 0) in vec2 template_pos;
 struct PhysicsObject {
     vec4 position;
     vec4 velocity;
-    vec4 acceleration;
+    vec4 acceleration;  
     float mass;
     float radius;
 };
@@ -154,8 +154,8 @@ void GPURenderer2D::setupInstancedRendering() {
     std::vector<float> vertices;
     
     // Create enough vertices to handle the largest polygon (let's say up to 16 sides)
-    for (int i = 0; i < 16; ++i) {
-        float angle = 2.0f * M_PI * i / 16.0f;
+    for (int i = 0; i < circle_segments; ++i) {
+        float angle = 2.0f * M_PI * i / circle_segments;
         vertices.push_back(cosf(angle));
         vertices.push_back(sinf(angle));
     }
@@ -192,7 +192,7 @@ void GPURenderer2D::render(const GPUPhysicsSystem& physics_system) {
     glBindVertexArray(circle_template_vao);
     
     // Draw as line loops (wireframe) - using all 16 vertices but shader will cull extras
-    glDrawArraysInstanced(GL_LINE_LOOP, 0, 16, physics_system.getObjectCount());
+    glDrawArraysInstanced(GL_LINE_LOOP, 0, circle_segments, physics_system.getObjectCount());
     
     glBindVertexArray(0);
 }
