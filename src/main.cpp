@@ -28,25 +28,32 @@ int main() {
     GPUPhysicsSystem physics_system(100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
     GPURenderer2D renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     
-    // Create some bouncing balls
-    for (int i = 0; i < 1; ++i) {
-        GPUPhysicsObject ball = {};
-        ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
-        ball.velocity = {0.0f, 100.0f, 0.0f, 0.0f};
-        ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
-        ball.mass = 1.0f;
-        ball.radius = 20.0f;
-        
-        physics_system.addObject(ball);
-    }
+    // Create some balls
+    GPUPhysicsObject ball = {};
+    ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
+    ball.velocity = {0.0f, 100.0f, 0.0f, 0.0f};
+    ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
+    ball.mass = 1.0f;
+    ball.radius = 20.0f;
+    
+    physics_system.addObject(ball);
+
+    ball = {};
+    ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4.0f*cos(M_PI/4.0f), SCREEN_HEIGHT/2.0f*sin(M_PI/4.0f), 0.0f, 0.0f};
+    ball.velocity = {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
+    ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
+    ball.mass = 1.0f;
+    ball.radius = 20.0f;
+    
+    physics_system.addObject(ball);
 
     // Ball showing correct path
-    GPUPhysicsObject ball = {};
+    ball = {};
     ball.position = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 0.0f};
     ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, 0.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
-    ball.radius = SCREEN_HEIGHT/4.0f;
+    ball.radius = 20.0f; //SCREEN_HEIGHT/4.0f;
     
     physics_system.addObject(ball);
     

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <deque>
+#include <algorithm>
 
 #include "gpu_physics.h"
 
@@ -21,6 +22,7 @@ public:
 private:
     glm::vec3 past_velocity = {0.0f, 0.0f, 0.0f};
     std::deque<float> kinetic_energy_history;
+    std::deque<float> potential_energy_history;
     std::deque<float> time_history;
     const size_t max_history_points = 10000;
 };

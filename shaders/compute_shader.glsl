@@ -38,9 +38,7 @@ float DistanceConstraint(vec3 X) {
 void main() {
     uint index = uint(gl_GlobalInvocationID.x);
     
-    if (index >= objects.length()) {
-        return;
-    }
+    if (index >= objects.length()) return;
 
     // Initialize constraint variables
     float lambda = 0.0;
@@ -74,7 +72,8 @@ void main() {
             // 14. Hard constraint C_j(x)
             float currentDistance = DistanceConstraint(currentX);
             // direction of the constraint δCⱼ/δxⱼ
-            vec3 constraint_gradient = (currentDistance > 0.0) ? normalize(currentX - vec3(u_screenSize.x/2, u_screenSize.y/2, 0)) : vec3(0.0, 1.0, 0.0);
+            vec3 dir = currentX - vec3(u_screenSize.x/2, u_screenSize.y/2, 0);
+            vec3 constraint_gradient = (length(dir) > 1e-6) ? normalize(dir) : vec3(0.0, 1.0, 0.0);
             // force of the constraint
             float constraint_force = stiffness * currentDistance + lambda;
             // clamping values and adding the direction of the constraint
@@ -84,6 +83,10 @@ void main() {
             LocalHessian += stiffness * outerProduct(constraint_gradient, constraint_gradient);
 
             // 20. Apply force to objects position
+            float det = determinant(LocalHessian);
+            if (abs(det) < 1e-6) {
+                continue; // skip this iteration, matrix not invertible
+            }
             vec3 delta_x_i = inverse(LocalHessian) * force;
             currentX += delta_x_i;
 
@@ -95,17 +98,14 @@ void main() {
                 stiffness += beta * abs(stiffness * currentDistance + lambda);
             }
 
-            // Don't change stationary object
-            if (index == 0) {
-                // 23. Update position
-                objects[index].position = vec4(currentX, 1.0);
+            // 23. Update position
+            if (any(isnan(currentX))) {
+                currentX = initialX; // or some safe fallback
             }
+            objects[index].position = vec4(currentX, 1.0);
         }
     }
 
-    // Don't change stationary object
-    if (index == 0) {
-        // 37. Update velocity
-        objects[index].velocity = vec4((objects[index].position.xyz - initialX) / u_deltaTime, 0.0);
-    }
+    // 37. Update velocity
+    objects[index].velocity = vec4((objects[index].position.xyz - initialX) / u_deltaTime, 0.0);
 }

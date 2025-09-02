@@ -1,6 +1,6 @@
 #include "imgui_helper.h"
+#include <algorithm>
 #define IMPLOT_IMPLEMENTATION
-#include "../vendor/implot/implot.h"
 
 void ImguiHelper::Init(GLFWwindow* window) {
     // Setup Dear ImGui context
@@ -41,7 +41,9 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     
     // Calculate total kinetic energy for this frame
     float total_kinetic_energy = 0.0f;
+    float total_potential_energy = 0.0f;
     for (const auto& obj : physics_data) {
+        total_potential_energy -= obj.mass * obj.acceleration.y * obj.position.y;
         total_kinetic_energy += 0.5f * obj.mass * 
             (obj.velocity.x * obj.velocity.x + 
              obj.velocity.y * obj.velocity.y + 
@@ -53,62 +55,66 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     accumulated_time += dt;
     
     kinetic_energy_history.push_back(total_kinetic_energy);
+    potential_energy_history.push_back(total_potential_energy);
     time_history.push_back(accumulated_time);
-    
-    // Keep history within bounds
-    if (kinetic_energy_history.size() > max_history_points) {
-        std::deque<float> downsampled_energy;
-        std::deque<float> downsampled_time;
-        
-        // Always keep the first point (t=0)
-        downsampled_energy.push_back(kinetic_energy_history.front());
-        downsampled_time.push_back(time_history.front());
-        
-        // Calculate step size for downsampling
-        int step = (kinetic_energy_history.size() - 1) / (max_history_points - 1);
-        
-        // Sample points at regular intervals (keeping the most recent points denser)
-        for (size_t i = 1; i < kinetic_energy_history.size(); i += step) {
-            if (downsampled_energy.size() >= max_history_points) break;
-            
-            downsampled_energy.push_back(kinetic_energy_history[i]);
-            downsampled_time.push_back(time_history[i]);
+
+    if (time_history.size() > max_history_points) {
+        // remove every second element from the history buffers
+        size_t j = 0;
+        for (size_t i = 0; i < time_history.size(); ++i) {
+            if (i % 2 != 0) { // Keep elements at odd indices (0-indexed)
+                time_history[j++] = time_history[i];
+            }
         }
-        
-        // Ensure we have exactly max_history_points
-        while (downsampled_energy.size() > max_history_points) {
-            downsampled_energy.pop_back();
-            downsampled_time.pop_back();
+        time_history.resize(j);
+        j = 0;
+        for (size_t i = 0; i < kinetic_energy_history.size(); ++i) {
+            if (i % 2 != 0) { // Keep elements at odd indices (0-indexed)
+                kinetic_energy_history[j++] = kinetic_energy_history[i];
+            }
         }
-        
-        // Always keep the most recent point
-        if (downsampled_energy.back() != kinetic_energy_history.back()) {
-            downsampled_energy.back() = kinetic_energy_history.back();
-            downsampled_time.back() = time_history.back();
+        kinetic_energy_history.resize(j);
+        j = 0;
+        for (size_t i = 0; i < potential_energy_history.size(); ++i) {
+            if (i % 2 != 0) { // Keep elements at odd indices (0-indexed)
+                potential_energy_history[j++] = potential_energy_history[i];
+            }
         }
-        
-        // Replace history with downsampled data
-        kinetic_energy_history = downsampled_energy;
-        time_history = downsampled_time;
+        potential_energy_history.resize(j);
     }
+
+    ImGui::Text("time: %zu", time_history.size());
     
     // Display current kinetic energy
     ImGui::Text("Total Kinetic Energy: %.3f J", total_kinetic_energy);
+    ImGui::Text("Total Potential Energy: %.3f J", total_potential_energy);
+    ImGui::Text("Total Energy: %.3f J", total_kinetic_energy + total_potential_energy);
     
     // Kinetic Energy Plot
     if (ImGui::CollapsingHeader("Kinetic Energy Graph", ImGuiTreeNodeFlags_DefaultOpen)) {
         // Convert deques to vectors for plotting (since deques don't have .data())
         std::vector<float> time_vec(time_history.begin(), time_history.end());
-        std::vector<float> energy_vec(kinetic_energy_history.begin(), kinetic_energy_history.end());
+        std::vector<float> kinetic_energy_vec(kinetic_energy_history.begin(), kinetic_energy_history.end());
+        std::vector<float> potential_energy_vec(potential_energy_history.begin(), potential_energy_history.end());
+        std::vector<float> total_energy(kinetic_energy_vec.size());
+        std::transform(kinetic_energy_vec.begin(), kinetic_energy_vec.end(), potential_energy_vec.begin(), total_energy.begin(), [](float a, float b) { return a + b; });
         
         if (ImPlot::BeginPlot("Kinetic Energy Over Time")) {
             ImPlot::SetupAxes("Time (s)", "Energy (J)");
-            ImPlot::SetupAxisLimits(ImAxis_X1, accumulated_time - 10.0f, accumulated_time, ImGuiCond_Always);
-            ImPlot::SetupAxisLimits(ImAxis_Y1, 0, total_kinetic_energy * 1.5f, ImGuiCond_Once);
+            ImPlot::SetupAxisLimits(ImAxis_X1, 0.0f, accumulated_time, ImGuiCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0f, 70000.0f, ImGuiCond_Once);
             
             ImPlot::PlotLine("Total Kinetic Energy", 
                             time_vec.data(), 
-                            energy_vec.data(), 
+                            kinetic_energy_vec.data(), 
+                            time_vec.size());
+            ImPlot::PlotLine("Potential Energy", 
+                            time_vec.data(), 
+                            potential_energy_vec.data(), 
+                            time_vec.size());
+            ImPlot::PlotLine("Total Energy", 
+                            time_vec.data(), 
+                            total_energy.data(), 
                             time_vec.size());
             
             ImPlot::EndPlot();
@@ -118,7 +124,7 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
         static bool auto_fit = true;
         ImGui::Checkbox("Auto-scale Y", &auto_fit);
         if (auto_fit) {
-            ImPlot::SetNextAxesToFit();
+            // ImPlot::SetNextAxesToFit();
         }
         
         ImGui::SameLine();
