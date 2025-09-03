@@ -7,54 +7,8 @@ std::ifstream shaderFile("../shaders/compute_shader.glsl");
 std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
 const char* compute_source = compute_shader_source.c_str();
 
-
-const char* instanced_vertex_shader = R"(
-#version 430 core
-
-layout(location = 0) in vec2 template_pos;
-
-struct PhysicsObject {
-    vec4 position;
-    vec4 velocity;
-    vec4 acceleration;  
-    float mass;
-    float radius;
-};
-
-layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
-    PhysicsObject objects[];
-};
-
-uniform mat4 u_projection;
-
-out vec3 v_color;
-
-void main() {
-    PhysicsObject obj = objects[gl_InstanceID];
-    
-    vec2 world_pos;
-    
-    // circle
-    world_pos = obj.position.xy + template_pos * obj.radius;
-    
-    gl_Position = u_projection * vec4(world_pos, 0.0, 1.0);
-    v_color = vec3(1.0);
-}
-)";
-
-const char* instanced_fragment_shader = R"(
-#version 430 core
-
-in vec3 v_color;
-out vec4 fragment_color;
-
-void main() {
-    fragment_color = vec4(v_color, 1.0);
-}
-)";
-
-GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
-    : max_objects(max_objects), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0) {
+GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int max_constraints, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
+    : max_objects(max_objects), max_constraints(max_constraints), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0), constraint_count(0) {
     
     compute_shader_program = loadComputeShader(compute_source);
     setupBuffers();
@@ -74,7 +28,7 @@ void GPUPhysicsSystem::setupBuffers() {
 
     glGenBuffers(1, &constraint_data_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, max_objects * sizeof(GPUPhysicsObject), nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, max_constraints * sizeof(GPUPhysicsConstraint), nullptr, GL_DYNAMIC_DRAW);
 }
 
 void GPUPhysicsSystem::addObject(const GPUPhysicsObject& obj) {
@@ -96,7 +50,7 @@ void GPUPhysicsSystem::addConstraint(const GPUPhysicsConstraint& constraint) {
     // Upload entire constraint to buffer
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 
-                    constraint_count * sizeof(GPUPhysicsObject), 
+                    constraint_count * sizeof(GPUPhysicsConstraint), 
                     sizeof(GPUPhysicsConstraint), 
                     &constraint);
     
@@ -157,12 +111,14 @@ GLuint GPUPhysicsSystem::loadComputeShader(const char* compute_source) {
 // GPURenderer2D Implementation
 GPURenderer2D::GPURenderer2D(int width, int height) {
     projection = glm::ortho(0.0f, float(width), 0.0f, float(height));
-    render_program = loadRenderShaders();
+    render_object_program = loadRenderShaders("../shaders/object_vertex_shader.glsl", "../shaders/object_fragment_shader.glsl");
+    render_constraint_program = loadRenderShaders("../shaders/constraint_vertex_shader.glsl", "../shaders/constraint_fragment_shader.glsl");
     setupInstancedRendering();
 }
 
 GPURenderer2D::~GPURenderer2D() {
-    glDeleteProgram(render_program);
+    glDeleteProgram(render_object_program);
+    glDeleteProgram(render_constraint_program);
     glDeleteVertexArrays(1, &circle_template_vao);
     glDeleteBuffers(1, &circle_template_vbo);
 }
@@ -178,6 +134,8 @@ void GPURenderer2D::setupInstancedRendering() {
         vertices.push_back(cosf(angle));
         vertices.push_back(sinf(angle));
     }
+
+    glGenVertexArrays(1, &dummy_vao);
     
     glGenVertexArrays(1, &circle_template_vao);
     glGenBuffers(1, &circle_template_vbo);
@@ -195,17 +153,17 @@ void GPURenderer2D::setupInstancedRendering() {
     glBindVertexArray(0);
 }
 
-void GPURenderer2D::render(const GPUPhysicsSystem& physics_system) {
+void GPURenderer2D::renderObjects(const GPUPhysicsSystem& physics_system) {
     if (physics_system.getObjectCount() == 0) return;
     
-    glUseProgram(render_program);
+    glUseProgram(render_object_program);
     
     // Set projection matrix
-    glUniformMatrix4fv(glGetUniformLocation(render_program, "u_projection"), 
+    glUniformMatrix4fv(glGetUniformLocation(render_object_program, "u_projection"), 
                        1, GL_FALSE, glm::value_ptr(projection));
     
     // Bind physics buffer for reading
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, physics_system.getDataBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, physics_system.getObjectDataBuffer());
     
     // Render all instances
     glBindVertexArray(circle_template_vao);
@@ -216,7 +174,35 @@ void GPURenderer2D::render(const GPUPhysicsSystem& physics_system) {
     glBindVertexArray(0);
 }
 
-GLuint GPURenderer2D::loadRenderShaders() {
+void GPURenderer2D::renderConstraints(const GPUPhysicsSystem& physics_system) {
+    if (physics_system.getConstraintCount() == 0) return;
+
+    glUseProgram(render_constraint_program);
+
+    glUniformMatrix4fv(glGetUniformLocation(render_constraint_program, "u_projection"), 
+                       1, GL_FALSE, glm::value_ptr(projection));
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, physics_system.getObjectDataBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, physics_system.getConstraintDataBuffer());
+
+    // Draw each constraint as a line (2 vertices per instance)
+    glBindVertexArray(dummy_vao);
+    glDrawArraysInstanced(GL_LINES, 0, 2, physics_system.getConstraintCount());
+    glBindVertexArray(0);
+}
+
+GLuint GPURenderer2D::loadRenderShaders(const char* instanced_vertex_shader_path, const char* instanced_fragment_shader_path) {
+
+    // Load the shader file
+    std::ifstream shaderFile(instanced_vertex_shader_path);
+    std::string shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
+    const char* instanced_vertex_shader = shader_source.c_str();
+
+    // Load the shader file
+    std::ifstream shaderFile2(instanced_fragment_shader_path);
+    std::string shader_source2((std::istreambuf_iterator<char>(shaderFile2)), std::istreambuf_iterator<char>());
+    const char* instanced_fragment_shader = shader_source2.c_str();
+
     // Compile vertex shader
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &instanced_vertex_shader, nullptr);

@@ -34,7 +34,7 @@ const int circle_segments = 64;
 
 class GPUPhysicsSystem {
 public:
-    GPUPhysicsSystem(int max_objects = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
+    GPUPhysicsSystem(int max_objects = 1000, int max_constraints = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
     ~GPUPhysicsSystem();
     
     void addObject(const GPUPhysicsObject& obj);
@@ -43,8 +43,10 @@ public:
     void setIterations(int iterations);
     std::vector<GPUPhysicsObject> getObjectsData();
     
-    GLuint getDataBuffer() const { return object_data_buffer; }
+    GLuint getObjectDataBuffer() const { return object_data_buffer; }
+    GLuint getConstraintDataBuffer() const { return constraint_data_buffer; }
     int getObjectCount() const { return object_count; }
+    int getConstraintCount() const { return constraint_count; }
 
 private:
     GLuint compute_shader_program;
@@ -67,13 +69,15 @@ public:
     GPURenderer2D(int width, int height);
     ~GPURenderer2D();
     
-    void render(const GPUPhysicsSystem& physics_system);
+    void renderObjects(const GPUPhysicsSystem& physics_system);
+    void renderConstraints(const GPUPhysicsSystem& physics_system);
 
 private:
-    GLuint render_program;
-    GLuint circle_template_vao, circle_template_vbo;
+    GLuint render_object_program;
+    GLuint render_constraint_program;
+    GLuint circle_template_vao, circle_template_vbo, dummy_vao;
     glm::mat4 projection;
     
     void setupInstancedRendering();
-    GLuint loadRenderShaders();
+    GLuint loadRenderShaders(const char* instanced_vertex_shader, const char* instanced_fragment_shader);
 };

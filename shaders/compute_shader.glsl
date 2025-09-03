@@ -33,7 +33,7 @@ layout(location = 1) uniform int u_iterations;
 layout(location = 2) uniform vec2 u_screenSize;
 
 float DistanceConstraint(vec3 X) {
-    return length(X - vec3(u_screenSize.x/2, u_screenSize.y/2, 0)) - u_screenSize.y/4;
+    return distance(X, vec3(u_screenSize.x/2, u_screenSize.y/2, 0)) - u_screenSize.y/4;
 }
 
 void main() {

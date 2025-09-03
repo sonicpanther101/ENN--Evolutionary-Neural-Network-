@@ -25,7 +25,7 @@ int main() {
               << work_group_count[1] << ", " << work_group_count[2] << std::endl;
     
     // Initialize GPU physics system
-    GPUPhysicsSystem physics_system(100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
+    GPUPhysicsSystem physics_system(100, 100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
     GPURenderer2D renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     
     // Create some balls
@@ -97,7 +97,8 @@ int main() {
         // Render directly from GPU buffers
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        renderer.render(physics_system);
+        renderer.renderObjects(physics_system);
+        renderer.renderConstraints(physics_system);
 
         imgui.Render();
         
