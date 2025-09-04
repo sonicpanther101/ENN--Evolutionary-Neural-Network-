@@ -20,7 +20,7 @@ struct GPUPhysicsObject {
 }; // 64 bytes it must be a multiple of 16 bytes
 
 struct GPUPhysicsConstraint {
-    int type;
+    int type;       // 0 for distance, 1 for hard, 2 for angle, 3 for volume
     int indexA;
     int indexB;
     float restLength;
