@@ -223,7 +223,7 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     ImGui::Separator();
     ImGui::Text("Controls:");
     
-    static int iterations = 1;
+    static int iterations = 5;
     if (ImGui::SliderInt("Iterations", &iterations, 1, 100)) {
         physics_system->setIterations(iterations);
     }

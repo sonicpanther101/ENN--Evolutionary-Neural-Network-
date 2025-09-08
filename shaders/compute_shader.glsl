@@ -32,8 +32,8 @@ layout(location = 0) uniform float u_deltaTime;
 layout(location = 1) uniform int u_iterations;
 layout(location = 2) uniform vec2 u_screenSize;
 
-float DistanceConstraint(vec3 X) {
-    return distance(X, vec3(u_screenSize.x/2, u_screenSize.y/2, 0)) - u_screenSize.y/4;
+float DistanceConstraint(vec3 X, vec3 Y, float restLength) {
+    return distance(X, Y) - restLength;
 }
 
 void main() {
@@ -42,10 +42,10 @@ void main() {
     if (index >= objects.length() || index == 2) return;
 
     // Initialize constraint variables
-    float lambda = 0.0;
+
     // float lambda_min = 0.0; // paper says to set as 0 but that doesn't work
     // float lambda_max = 100.0; // paper says to set to infinity
-    float stiffness = 1.0;
+
     float beta = 10.0;
 
     // For point objects - mass matrix M_i
@@ -62,26 +62,49 @@ void main() {
 
     // 7. Iterate n times
     for (int i = 0; i < u_iterations; i++) {
-        // 10. Calculate the force required to have moved the obect by the amount it moved
-        vec3 force = -(Mass / (u_deltaTime * u_deltaTime)) * (currentX - y);
-        // 11. Initialize the local hessian matrix
-        mat3 LocalHessian = Mass / (u_deltaTime * u_deltaTime);
-
         // 9. Iterate over all colors
         for (uint j = 0; j < 1; j++) {
 
-            // 14. Hard constraint C_j(x)
-            float currentDistance = DistanceConstraint(currentX);
-            // direction of the constraint δCⱼ/δxⱼ
-            vec3 dir = currentX - vec3(u_screenSize.x/2, u_screenSize.y/2, 0);
-            vec3 constraint_gradient = (length(dir) > 1e-6) ? normalize(dir) : vec3(0.0, 1.0, 0.0);
-            // force of the constraint
-            float constraint_force = stiffness * currentDistance + lambda;
-            // clamping values and adding the direction of the constraint
-            force -= constraint_force * constraint_gradient;
+            // 10. Calculate the force required to have moved the obect by the amount it moved
+            vec3 force = -(Mass / (u_deltaTime * u_deltaTime)) * (currentX - y);
+            // 11. Initialize the local hessian matrix
+            mat3 LocalHessian = Mass / (u_deltaTime * u_deltaTime);
 
-            // 18. Update the local hessian matrix missing geometric stiffness matrix
-            LocalHessian += stiffness * outerProduct(constraint_gradient, constraint_gradient);
+                // 12. Iterate over all constraints affecting this object
+                for (uint k = 0; k < constraints.length(); k++) {
+                    if (!(constraints[k].indexA == index || constraints[k].indexB == index)) continue;
+
+                    vec3 constraint_gradient;
+                    vec3 otherX = (index == constraints[k].indexA) ? objects[constraints[k].indexB].position.xyz : objects[constraints[k].indexA].position.xyz;
+
+                    // 13. check if hard constraint
+                    if (constraints[k].type == 1) { // hard constraint
+                        // 14. Hard constraint C_j(x)
+                        float currentDistance = DistanceConstraint(currentX, otherX, constraints[k].restLength);
+                        // direction of the constraint δCⱼ/δxⱼ
+                        vec3 dir = (index == constraints[k].indexA) ? (currentX - otherX) : (otherX - currentX);
+                        vec3 constraint_gradient = (length(dir) > 1e-6) ? normalize(dir) : vec3(0.0, 1.0, 0.0);
+                        // force of the constraint
+                        float constraint_force = constraints[k].stiffness * currentDistance + constraints[k].lambda;
+                        // clamping values and adding the direction of the constraint
+                        force -= constraint_force * constraint_gradient;
+
+                    // 15. check if soft constraint
+                    } else { // soft constraint
+                        // 16. Constraint
+                        float currentDistance = DistanceConstraint(currentX, otherX, constraints[k].restLength);
+                        // direction of the constraint δCⱼ/δxⱼ
+                        vec3 dir = (index == constraints[k].indexA) ? (currentX - otherX) : (currentX - otherX);
+                        vec3 constraint_gradient = (length(dir) > 1e-6) ? normalize(dir) : vec3(0.0, 1.0, 0.0);
+                        // force of the constraint
+                        float constraint_force = constraints[k].stiffness * currentDistance;
+                        // clamping values and adding the direction of the constraint
+                        force -= constraint_force * constraint_gradient;
+                    }
+
+                    // 18. Update the local hessian matrix missing geometric stiffness matrix
+                    LocalHessian += constraints[k].stiffness * outerProduct(constraint_gradient, constraint_gradient);
+                }
 
             // 20. Apply force to objects position
             float det = determinant(LocalHessian);
@@ -91,19 +114,27 @@ void main() {
             vec3 delta_x_i = inverse(LocalHessian) * force;
             currentX += delta_x_i;
 
-            // 28. Update lambda
-            lambda = constraint_force; // max(constraint_force, lambda_min);
-            // 29. Check lambda against bounds
-            // if (lambda_min < lambda) {
-                // 30. Update stiffness
-                stiffness += beta * abs(stiffness * currentDistance + lambda);
-            // }
-
             // 23. Update position
             if (any(isnan(currentX))) {
                 currentX = initialX; // or some safe fallback
             }
             objects[index].position = vec4(currentX, 1.0);
+        }
+
+        // 26. loop over all constraints
+        for (uint j = 0; j < constraints.length(); j++) {
+            if (!(constraints[j].indexA == index || constraints[j].indexB == index)) continue;
+            // 28. Update lambda
+            vec3 otherX = (index == constraints[j].indexA) ? objects[constraints[j].indexB].position.xyz : objects[constraints[j].indexA].position.xyz;
+            float currentDistance = DistanceConstraint(currentX, otherX, constraints[j].restLength);
+            float constraint_force = constraints[j].stiffness * currentDistance;
+
+            constraints[j].lambda = constraint_force; // max(constraint_force, lambda_min);
+            // 29. Check lambda against bounds
+            // if (lambda_min < lambda) {
+                // 30. Update stiffness
+                constraints[j].stiffness += beta * abs(constraints[j].stiffness * currentDistance + constraints[j].lambda);
+            // }
         }
     }
 
