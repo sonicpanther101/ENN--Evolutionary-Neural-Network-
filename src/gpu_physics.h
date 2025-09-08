@@ -2,6 +2,9 @@
 #include <GL/glew.h>
 #include <vector>
 #include <cmath>
+#include <cstring>
+#include <iostream>
+#include <fstream>
 #include "../vendor/glm/glm/gtc/type_ptr.hpp"
 #include "../vendor/glm/glm/gtc/matrix_transform.hpp"
 
@@ -34,7 +37,7 @@ const int circle_segments = 64;
 
 class GPUPhysicsSystem {
 public:
-    GPUPhysicsSystem(int max_objects = 1000, int max_constraints = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
+    GPUPhysicsSystem(int max_objects = 1000, int max_constraints = 1000, int iterations = 5, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
     ~GPUPhysicsSystem();
     
     void addObject(const GPUPhysicsObject& obj);
@@ -49,7 +52,8 @@ public:
     int getConstraintCount() const { return constraint_count; }
 
 private:
-    GLuint compute_shader_program;
+    GLuint object_compute_shader_program;
+    GLuint constraint_compute_shader_program;
     GLuint object_data_buffer;
     GLuint constraint_data_buffer;
     
@@ -61,7 +65,7 @@ private:
     int SCREEN_WIDTH, SCREEN_HEIGHT;
     
     void setupBuffers();
-    GLuint loadComputeShader(const char* compute_source);
+    GLuint loadComputeShader(const std::string compute_path);
 };
 
 class GPURenderer2D {

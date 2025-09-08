@@ -1,23 +1,17 @@
 #include "gpu_physics.h"
-#include <iostream>
-#include <fstream>
-
-// Load the shader file
-std::ifstream shaderFile("../shaders/compute_shader.glsl");
-std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
-const char* compute_source = compute_shader_source.c_str();
 
 GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int max_constraints, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
     : max_objects(max_objects), max_constraints(max_constraints), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0), constraint_count(0) {
     
-    compute_shader_program = loadComputeShader(compute_source);
+    object_compute_shader_program = loadComputeShader("../shaders/object_compute_shader.glsl");
     setupBuffers();
 }
 
 GPUPhysicsSystem::~GPUPhysicsSystem() {
     glDeleteBuffers(1, &object_data_buffer);
     glDeleteBuffers(1, &constraint_data_buffer);
-    glDeleteProgram(compute_shader_program);
+    glDeleteProgram(object_compute_shader_program);
+    glDeleteProgram(constraint_compute_shader_program);
 }
 
 void GPUPhysicsSystem::setupBuffers() {
@@ -60,26 +54,52 @@ void GPUPhysicsSystem::addConstraint(const GPUPhysicsConstraint& constraint) {
 void GPUPhysicsSystem::update(float dt) {
     if (object_count == 0) return;
     
-    glUseProgram(compute_shader_program);
+    glUseProgram(object_compute_shader_program);
+    glUseProgram(constraint_compute_shader_program);
     
     // Bind single buffer
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, object_data_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, constraint_data_buffer);
     
     // Set uniforms
-    glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
-    glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
-    glUniform1i(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
+    glUniform1f(glGetUniformLocation(object_compute_shader_program, "u_deltaTime"), dt);
+    glUniform2f(glGetUniformLocation(object_compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
+    glUniform1i(glGetUniformLocation(object_compute_shader_program, "u_iterations"), iterations);
+    glUniform1i(glGetUniformLocation(object_compute_shader_program, "u_objectCount"), object_count);
+    glUniform1i(glGetUniformLocation(object_compute_shader_program, "u_constraintCount"), constraint_count);
+    glUniform1f(glGetUniformLocation(constraint_compute_shader_program, "u_deltaTime"), dt);
+    glUniform2f(glGetUniformLocation(constraint_compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
+    glUniform1i(glGetUniformLocation(constraint_compute_shader_program, "u_iterations"), iterations);
+    glUniform1i(glGetUniformLocation(constraint_compute_shader_program, "u_objectCount"), object_count);
+    glUniform1i(glGetUniformLocation(constraint_compute_shader_program, "u_constraintCount"), constraint_count);
+
     
     // Dispatch compute shader
-    int work_groups = (object_count + 63) / 64;
-    glDispatchCompute(work_groups, 1, 1);
-    
-    // Memory barrier
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    int object_work_groups = (object_count + 63) / 64;
+    int constraint_work_groups = (constraint_count + 63) / 64;
+    for (int i = 0; i < iterations; ++i) {
+        // optionally set u_iterations to 1 if shader uses it (not necessary)
+        glUniform1i(glGetUniformLocation(object_compute_shader_program, "u_iteration"), i);
+        glUniform1i(glGetUniformLocation(constraint_compute_shader_program, "u_iteration"), i);
+
+        // Dispatch object compute shader
+        glDispatchCompute(object_work_groups, 1, 1);
+        // ensure writes are visible to next dispatch
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+
+        // Dispatch constraint compute shader
+        glDispatchCompute(constraint_work_groups, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    }
 }
 
-GLuint GPUPhysicsSystem::loadComputeShader(const char* compute_source) {
+GLuint GPUPhysicsSystem::loadComputeShader(const std::string compute_path) {
+
+    // Load the shader file
+    std::ifstream shaderFile(compute_path);
+    std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
+    const char* compute_source = compute_shader_source.c_str();
+
     GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
     glShaderSource(compute_shader, 1, &compute_source, nullptr);
     glCompileShader(compute_shader);
