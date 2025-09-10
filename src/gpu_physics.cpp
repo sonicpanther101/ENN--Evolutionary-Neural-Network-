@@ -7,58 +7,88 @@ std::ifstream shaderFile("../shaders/compute_shader.glsl");
 std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
 const char* compute_source = compute_shader_source.c_str();
 
-GPUPhysicsSystem::GPUPhysicsSystem(int max_objects, int max_constraints, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
+PhysicsSystem::PhysicsSystem(int max_objects, int max_constraints, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
     : max_objects(max_objects), max_constraints(max_constraints), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0), constraint_count(0) {
     
     compute_shader_program = loadComputeShader(compute_source);
     setupBuffers();
 }
 
-GPUPhysicsSystem::~GPUPhysicsSystem() {
+PhysicsSystem::~PhysicsSystem() {
     glDeleteBuffers(1, &object_data_buffer);
     glDeleteBuffers(1, &constraint_data_buffer);
     glDeleteProgram(compute_shader_program);
 }
 
-void GPUPhysicsSystem::setupBuffers() {
+void PhysicsSystem::setupBuffers() {
     // Single buffer for all object data
     glGenBuffers(1, &object_data_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, max_objects * sizeof(GPUPhysicsObject), nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, max_objects * sizeof(PhysicsObject), nullptr, GL_DYNAMIC_DRAW);
 
     glGenBuffers(1, &constraint_data_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, max_constraints * sizeof(GPUPhysicsConstraint), nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, max_constraints * sizeof(PhysicsConstraint), nullptr, GL_DYNAMIC_DRAW);
+
+    inertial_positions.resize(max_objects);
+    previous_positions.resize(max_objects);
 }
 
-void GPUPhysicsSystem::addObject(const GPUPhysicsObject& obj) {
+void PhysicsSystem::addObject(const PhysicsObject& obj) {
     if (object_count >= max_objects) return;
     
     // Upload entire object to buffer
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 
-                    object_count * sizeof(GPUPhysicsObject), 
-                    sizeof(GPUPhysicsObject), 
+                    object_count * sizeof(PhysicsObject), 
+                    sizeof(PhysicsObject), 
                     &obj);
     
     object_count++;
 }
 
-void GPUPhysicsSystem::addConstraint(const GPUPhysicsConstraint& constraint) {
+void PhysicsSystem::addConstraint(const PhysicsConstraint& constraint) {
     if (constraint_count >= max_constraints) return;
     
     // Upload entire constraint to buffer
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 
-                    constraint_count * sizeof(GPUPhysicsConstraint), 
-                    sizeof(GPUPhysicsConstraint), 
+                    constraint_count * sizeof(PhysicsConstraint), 
+                    sizeof(PhysicsConstraint), 
                     &constraint);
     
     constraint_count++;
 }
 
-void GPUPhysicsSystem::update(float dt) {
+void PhysicsSystem::update(float dt) {
     if (object_count == 0) return;
+
+    std::vector<PhysicsObject> objects = getObjectsData();
+
+    // Line 3: Calculate y (inertial positions) big O(n) is the same with AoS and SoA, just slightly higher constant for SoA
+    for(int i = 0; i < object_count; i++) {
+        inertial_positions[i] = objects[i].position + 
+                              dt * objects[i].velocity + 
+                              dt*dt * objects[i].acceleration;
+    }
+    
+    // Line 4: Adaptive initialization (using previous position as initial guess)
+    for(int i = 0; i < object_count; i++) {
+        // Simple approach: use previous position as initial guess
+        // You could implement more sophisticated adaptive initialization here
+        objects[i].position = glm::vec4(previous_positions[i], 0.0);
+    }
+
+     // Upload updated positions back to GPU buffer
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 
+                   object_count * sizeof(PhysicsObject), 
+                   objects.data());
+
+    // Store current positions for next frame
+    for(int i = 0; i < object_count; i++) {
+        previous_positions[i] = objects[i].position;
+    }
     
     glUseProgram(compute_shader_program);
     
@@ -71,15 +101,37 @@ void GPUPhysicsSystem::update(float dt) {
     glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
     glUniform1i(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
     
-    // Dispatch compute shader
-    int work_groups = (object_count + 63) / 64;
-    glDispatchCompute(work_groups, 1, 1);
-    
-    // Memory barrier
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    // 7. Iterate n times
+    int object_work_groups = (object_count + 63) / 64;
+    int constraint_work_groups = (constraint_count + 63) / 64;
+    for (int n=0; n < iterations; n++) {
+        // 9. Iterate over each color c
+        for (int c=0; c < 1; c++) {
+            glUniform1i(glGetUniformLocation(compute_shader_program, "u_position_update"), false);
+            
+            // Dispatch vertex-wise compute shader solving equation (4)
+            glDispatchCompute(object_work_groups, 1, 1);
+            
+            // Memory barrier
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+            glUniform1i(glGetUniformLocation(compute_shader_program, "u_position_update"), true);
+
+            // Dispatch vertex-wise compute shader solving equation (4)
+            glDispatchCompute(object_work_groups, 1, 1);
+            
+            // Memory barrier
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        }
+        // // Dispatch constraint-wise compute shader updating the dual variables and stiffness
+        // glDispatchCompute(constraint_work_groups, 1, 1);
+        
+        // // Memory barrier
+        // glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 }
 
-GLuint GPUPhysicsSystem::loadComputeShader(const char* compute_source) {
+GLuint PhysicsSystem::loadComputeShader(const char* compute_source) {
     GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
     glShaderSource(compute_shader, 1, &compute_source, nullptr);
     glCompileShader(compute_shader);
@@ -153,7 +205,7 @@ void GPURenderer2D::setupInstancedRendering() {
     glBindVertexArray(0);
 }
 
-void GPURenderer2D::renderObjects(const GPUPhysicsSystem& physics_system) {
+void GPURenderer2D::renderObjects(const PhysicsSystem& physics_system) {
     if (physics_system.getObjectCount() == 0) return;
     
     glUseProgram(render_object_program);
@@ -174,7 +226,7 @@ void GPURenderer2D::renderObjects(const GPUPhysicsSystem& physics_system) {
     glBindVertexArray(0);
 }
 
-void GPURenderer2D::renderConstraints(const GPUPhysicsSystem& physics_system) {
+void GPURenderer2D::renderConstraints(const PhysicsSystem& physics_system) {
     if (physics_system.getConstraintCount() == 0) return;
 
     glUseProgram(render_constraint_program);
@@ -249,14 +301,14 @@ GLuint GPURenderer2D::loadRenderShaders(const char* instanced_vertex_shader_path
     return program;
 }
 
-std::vector<GPUPhysicsObject> GPUPhysicsSystem::getObjectsData() {
-    std::vector<GPUPhysicsObject> data(object_count);
+std::vector<PhysicsObject> PhysicsSystem::getObjectsData() {
+    std::vector<PhysicsObject> data(object_count);
     
     // Bind and read from GPU buffer
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
     GLvoid* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
     if (ptr) {
-        memcpy(data.data(), ptr, object_count * sizeof(GPUPhysicsObject));
+        memcpy(data.data(), ptr, object_count * sizeof(PhysicsObject));
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
     }
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -264,6 +316,6 @@ std::vector<GPUPhysicsObject> GPUPhysicsSystem::getObjectsData() {
     return data;
 }
 
-void GPUPhysicsSystem::setIterations(int iterations) {
+void PhysicsSystem::setIterations(int iterations) {
     this->iterations = iterations;
 }

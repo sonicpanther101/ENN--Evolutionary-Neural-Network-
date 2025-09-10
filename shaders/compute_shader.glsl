@@ -91,14 +91,6 @@ void main() {
             vec3 delta_x_i = inverse(LocalHessian) * force;
             currentX += delta_x_i;
 
-            // 28. Update lambda
-            lambda = constraint_force; // max(constraint_force, lambda_min);
-            // 29. Check lambda against bounds
-            // if (lambda_min < lambda) {
-                // 30. Update stiffness
-                stiffness += beta * abs(stiffness * currentDistance + lambda);
-            // }
-
             // 23. Update position
             if (any(isnan(currentX))) {
                 currentX = initialX; // or some safe fallback

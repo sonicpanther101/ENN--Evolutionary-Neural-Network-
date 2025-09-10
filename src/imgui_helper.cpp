@@ -30,7 +30,7 @@ void ImguiHelper::Render() {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUPhysicsObject> physics_data, float dt) {
+void ImguiHelper::AddElements(PhysicsSystem* physics_system, std::vector<PhysicsObject> physics_data, float dt) {
     // Create ImGui window for physics tracking
     ImGui::Begin("Physics Object Tracker");
     
@@ -230,7 +230,7 @@ void ImguiHelper::AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUP
     
     if (ImGui::Button("Reset Objects")) {
         for (int i = 0; i < 3; ++i) {
-            GPUPhysicsObject ball = {};
+            PhysicsObject ball = {};
             ball.position = {400.0f + i * 50.0f, 300.0f + i * 30.0f, 0,0};
             ball.velocity = {(i - 1) * 100.0f, (i - 1) * 80.0f, 0,0};
             ball.acceleration = {0.0f, 300.0f, 0,0};

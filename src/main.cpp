@@ -25,11 +25,11 @@ int main() {
               << work_group_count[1] << ", " << work_group_count[2] << std::endl;
     
     // Initialize GPU physics system
-    GPUPhysicsSystem physics_system(100, 100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
+    PhysicsSystem physics_system(100, 100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
     GPURenderer2D renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     
     // Create some balls
-    GPUPhysicsObject ball = {};
+    PhysicsObject ball = {};
     ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
     ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
@@ -57,7 +57,7 @@ int main() {
     
     physics_system.addObject(ball);
 
-    GPUPhysicsConstraint constraint = {};
+    PhysicsConstraint constraint = {};
     constraint.type = 0;
     constraint.indexA = 0;
     constraint.indexB = 1;
@@ -69,7 +69,7 @@ int main() {
     auto last_time = std::chrono::high_resolution_clock::now();
 
     // Storage for physics data read back from GPU
-    std::vector<GPUPhysicsObject> physics_data;
+    std::vector<PhysicsObject> physics_data;
     
     while (!window.shouldClose()) {
         window.pollEvents();

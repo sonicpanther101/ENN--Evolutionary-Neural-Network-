@@ -17,7 +17,7 @@ public:
     void Init(GLFWwindow* window);
     void NewFrame();
     void Render();
-    void AddElements(GPUPhysicsSystem* physics_system, std::vector<GPUPhysicsObject> physics_data, float dt);
+    void AddElements(PhysicsSystem* physics_system, std::vector<PhysicsObject> physics_data, float dt);
     void Cleanup();
 private:
     glm::vec3 past_velocity = {0.0f, 0.0f, 0.0f};

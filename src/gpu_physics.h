@@ -10,7 +10,7 @@
 #endif
 
 // GPU-aligned struct (std430 layout)
-struct GPUPhysicsObject {
+struct PhysicsObject {
     glm::vec4 position;     // 16 bytes
     glm::vec4 velocity;     // 16 bytes
     glm::vec4 acceleration; // 16 bytes
@@ -19,7 +19,7 @@ struct GPUPhysicsObject {
     glm::vec2 _pad;        // 8 bytes 
 }; // 64 bytes it must be a multiple of 16 bytes
 
-struct GPUPhysicsConstraint {
+struct PhysicsConstraint {
     int type;
     int indexA;
     int indexB;
@@ -32,16 +32,16 @@ struct GPUPhysicsConstraint {
 
 const int circle_segments = 64;
 
-class GPUPhysicsSystem {
+class PhysicsSystem {
 public:
-    GPUPhysicsSystem(int max_objects = 1000, int max_constraints = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
-    ~GPUPhysicsSystem();
+    PhysicsSystem(int max_objects = 1000, int max_constraints = 1000, int iterations = 1, int SCREEN_WIDTH = 1600, int SCREEN_HEIGHT = 1200);
+    ~PhysicsSystem();
     
-    void addObject(const GPUPhysicsObject& obj);
-    void addConstraint(const GPUPhysicsConstraint& constraint);
+    void addObject(const PhysicsObject& obj);
+    void addConstraint(const PhysicsConstraint& constraint);
     void update(float dt);
     void setIterations(int iterations);
-    std::vector<GPUPhysicsObject> getObjectsData();
+    std::vector<PhysicsObject> getObjectsData();
     
     GLuint getObjectDataBuffer() const { return object_data_buffer; }
     GLuint getConstraintDataBuffer() const { return constraint_data_buffer; }
@@ -59,6 +59,9 @@ private:
     int object_count;
     int constraint_count;
     int SCREEN_WIDTH, SCREEN_HEIGHT;
+
+    std::vector<glm::vec3> inertial_positions; // Stores y values
+    std::vector<glm::vec3> previous_positions; // Stores x from previous frame
     
     void setupBuffers();
     GLuint loadComputeShader(const char* compute_source);
@@ -69,8 +72,8 @@ public:
     GPURenderer2D(int width, int height);
     ~GPURenderer2D();
     
-    void renderObjects(const GPUPhysicsSystem& physics_system);
-    void renderConstraints(const GPUPhysicsSystem& physics_system);
+    void renderObjects(const PhysicsSystem& physics_system);
+    void renderConstraints(const PhysicsSystem& physics_system);
 
 private:
     GLuint render_object_program;
