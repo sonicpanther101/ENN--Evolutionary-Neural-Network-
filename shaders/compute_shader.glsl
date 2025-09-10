@@ -46,7 +46,7 @@ void main() {
     // float lambda_min = 0.0; // paper says to set as 0 but that doesn't work
     // float lambda_max = 100.0; // paper says to set to infinity
 
-    float beta = 10.0;
+    float beta = 0.1;
 
     // For point objects - mass matrix M_i
     float mass = objects[index].mass;
@@ -71,7 +71,7 @@ void main() {
             mat3 LocalHessian = Mass / (u_deltaTime * u_deltaTime);
 
                 // 12. Iterate over all constraints affecting this object
-                for (uint k = 0; k < constraints.length(); k++) {
+                for (uint k = 0; k < 1; k++) {
                     if (!(constraints[k].indexA == index || constraints[k].indexB == index)) continue;
 
                     vec3 constraint_gradient;
@@ -122,18 +122,18 @@ void main() {
         }
 
         // 26. loop over all constraints
-        for (uint j = 0; j < constraints.length(); j++) {
+        for (uint j = 0; j < 1; j++) {
             if (!(constraints[j].indexA == index || constraints[j].indexB == index)) continue;
             // 28. Update lambda
             vec3 otherX = (index == constraints[j].indexA) ? objects[constraints[j].indexB].position.xyz : objects[constraints[j].indexA].position.xyz;
             float currentDistance = DistanceConstraint(currentX, otherX, constraints[j].restLength);
             float constraint_force = constraints[j].stiffness * currentDistance;
 
-            constraints[j].lambda = constraint_force; // max(constraint_force, lambda_min);
+            // constraints[j].lambda = constraint_force; // max(constraint_force, lambda_min);
             // 29. Check lambda against bounds
             // if (lambda_min < lambda) {
                 // 30. Update stiffness
-                constraints[j].stiffness += beta * abs(constraints[j].stiffness * currentDistance + constraints[j].lambda);
+                // constraints[j].stiffness += beta * abs(constraints[j].stiffness * currentDistance + constraints[j].lambda);
             // }
         }
     }

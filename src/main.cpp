@@ -30,6 +30,7 @@ int main() {
     
     // Create some balls
     GPUPhysicsObject ball = {};
+    // ball.position = {SCREEN_WIDTH/2.0f, SCREEN_HEIGHT/2.0f, 0.0f, 0.0f};
     ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
     ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
@@ -39,8 +40,9 @@ int main() {
     physics_system.addObject(ball);
 
     ball = {};
+    // ball.position = {SCREEN_WIDTH/2.0f+100.0f, SCREEN_HEIGHT/2.0f, 0.0f, 0.0f};
     ball.position = {SCREEN_WIDTH/2.0f, 3.0f*SCREEN_HEIGHT/4.0f, 0.0f, 0.0f};
-    ball.velocity = {1.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
+    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
@@ -57,14 +59,18 @@ int main() {
     
     physics_system.addObject(ball);
 
-    GPUPhysicsConstraint constraint = {};
-    constraint.type = 0;
-    constraint.indexA = 0;
-    constraint.indexB = 1;
-    constraint.restLength = 100.0f;
-    constraint.stiffness = 1.0f;
-    
-    physics_system.addConstraint(constraint);
+    for (int i = 0; i < physics_system.getObjectCount() - 1; ++i) {
+        GPUPhysicsConstraint constraint = {};
+        constraint.type = 0;
+        constraint.indexA = i;
+        constraint.indexB = 2;
+        constraint.restLength = SCREEN_HEIGHT/4.0f;
+        // constraint.restLength = 100.0f;
+        constraint.stiffness = 0.98f;
+        constraint.lambda = 0.0f;
+        
+        physics_system.addConstraint(constraint);
+    }
     
     auto last_time = std::chrono::high_resolution_clock::now();
 
