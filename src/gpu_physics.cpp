@@ -2,22 +2,25 @@
 #include <iostream>
 #include <fstream>
 
-// Load the shader file
-std::ifstream shaderFile("../shaders/compute_shader.glsl");
-std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
-const char* compute_source = compute_shader_source.c_str();
-
 PhysicsSystem::PhysicsSystem(int max_objects, int max_constraints, int iterations, int SCREEN_WIDTH, int SCREEN_HEIGHT) 
     : max_objects(max_objects), max_constraints(max_constraints), iterations(iterations), SCREEN_WIDTH(SCREEN_WIDTH), SCREEN_HEIGHT(SCREEN_HEIGHT), object_count(0), constraint_count(0) {
     
-    compute_shader_program = loadComputeShader(compute_source);
+    initial_compute_shader_program    = loadComputeShader("../shaders/compute_shader/initial.glsl");
+    object_compute_shader_program     = loadComputeShader("../shaders/compute_shader/object.glsl");
+    position_compute_shader_program   = loadComputeShader("../shaders/compute_shader/position.glsl");
+    constraint_compute_shader_program = loadComputeShader("../shaders/compute_shader/constraint.glsl");
+    velocity_compute_shader_program   = loadComputeShader("../shaders/compute_shader/velocity.glsl");
     setupBuffers();
 }
 
 PhysicsSystem::~PhysicsSystem() {
     glDeleteBuffers(1, &object_data_buffer);
     glDeleteBuffers(1, &constraint_data_buffer);
-    glDeleteProgram(compute_shader_program);
+    glDeleteProgram(initial_compute_shader_program);
+    glDeleteProgram(object_compute_shader_program);
+    glDeleteProgram(position_compute_shader_program);
+    glDeleteProgram(constraint_compute_shader_program);
+    glDeleteProgram(velocity_compute_shader_program);
 }
 
 void PhysicsSystem::setupBuffers() {
@@ -29,9 +32,6 @@ void PhysicsSystem::setupBuffers() {
     glGenBuffers(1, &constraint_data_buffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, constraint_data_buffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, max_constraints * sizeof(PhysicsConstraint), nullptr, GL_DYNAMIC_DRAW);
-
-    inertial_positions.resize(max_objects);
-    previous_positions.resize(max_objects);
 }
 
 void PhysicsSystem::addObject(const PhysicsObject& obj) {
@@ -64,74 +64,73 @@ void PhysicsSystem::update(float dt) {
     if (object_count == 0) return;
 
     std::vector<PhysicsObject> objects = getObjectsData();
-
-    // Line 3: Calculate y (inertial positions) big O(n) is the same with AoS and SoA, just slightly higher constant for SoA
-    for(int i = 0; i < object_count; i++) {
-        inertial_positions[i] = objects[i].position + 
-                              dt * objects[i].velocity + 
-                              dt*dt * objects[i].acceleration;
-    }
     
-    // Line 4: Adaptive initialization (using previous position as initial guess)
-    for(int i = 0; i < object_count; i++) {
-        // Simple approach: use previous position as initial guess
-        // You could implement more sophisticated adaptive initialization here
-        objects[i].position = glm::vec4(previous_positions[i], 0.0);
-    }
-
-     // Upload updated positions back to GPU buffer
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, 
-                   object_count * sizeof(PhysicsObject), 
-                   objects.data());
-
-    // Store current positions for next frame
-    for(int i = 0; i < object_count; i++) {
-        previous_positions[i] = objects[i].position;
-    }
+    glUseProgram(initial_compute_shader_program);
+    glUseProgram(object_compute_shader_program);
+    glUseProgram(position_compute_shader_program);
+    glUseProgram(constraint_compute_shader_program);
+    glUseProgram(velocity_compute_shader_program);
     
-    glUseProgram(compute_shader_program);
-    
-    // Bind single buffer
+    // Bind buffers
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, object_data_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, constraint_data_buffer);
     
     // Set uniforms
-    glUniform1f(glGetUniformLocation(compute_shader_program, "u_deltaTime"), dt);
-    glUniform2f(glGetUniformLocation(compute_shader_program, "u_screenSize"), SCREEN_WIDTH, SCREEN_HEIGHT);
-    glUniform1i(glGetUniformLocation(compute_shader_program, "u_iterations"), iterations);
-    
-    // 7. Iterate n times
+    glUniform1f(glGetUniformLocation(initial_compute_shader_program, "u_deltaTime"), dt);
+    glUniform1f(glGetUniformLocation(object_compute_shader_program, "u_deltaTime"), dt);
+    glUniform1f(glGetUniformLocation(velocity_compute_shader_program, "u_deltaTime"), dt);
+
+    // set work groups
     int object_work_groups = (object_count + 63) / 64;
     int constraint_work_groups = (constraint_count + 63) / 64;
+    
+    // 3. - 6. initialise time-step
+    glUseProgram(initial_compute_shader_program);
+    glDispatchCompute(object_work_groups, 1, 1);
+
+    // Memory barrier
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // 7. Iterate n times
     for (int n=0; n < iterations; n++) {
         // 9. Iterate over each color c
         for (int c=0; c < 1; c++) {
-            glUniform1i(glGetUniformLocation(compute_shader_program, "u_position_update"), false);
-            
-            // Dispatch vertex-wise compute shader solving equation (4)
+
+            // Dispatch vertex-wise compute shader solving equation (4) (the hard part)
+            glUseProgram(object_compute_shader_program);
             glDispatchCompute(object_work_groups, 1, 1);
             
             // Memory barrier
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-            glUniform1i(glGetUniformLocation(compute_shader_program, "u_position_update"), true);
-
-            // Dispatch vertex-wise compute shader solving equation (4)
+            // 23. Dispatch vertex-wise compute shader to update positions
+            glUseProgram(position_compute_shader_program);
             glDispatchCompute(object_work_groups, 1, 1);
             
             // Memory barrier
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         }
-        // // Dispatch constraint-wise compute shader updating the dual variables and stiffness
-        // glDispatchCompute(constraint_work_groups, 1, 1);
+        // 26. - 35. Dispatch constraint-wise compute shader updating the dual variables and stiffness
+        glUseProgram(constraint_compute_shader_program);
+        glDispatchCompute(constraint_work_groups, 1, 1);
         
-        // // Memory barrier
-        // glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        // Memory barrier
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
+
+    // 37. Update velocity
+    glUseProgram(velocity_compute_shader_program);
+    glDispatchCompute(object_work_groups, 1, 1);
+
+    // Memory barrier
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-GLuint PhysicsSystem::loadComputeShader(const char* compute_source) {
+GLuint PhysicsSystem::loadComputeShader(const char* compute_path) {
+    // Load the shader file
+    std::ifstream shaderFile(compute_path);
+    std::string compute_shader_source((std::istreambuf_iterator<char>(shaderFile)), std::istreambuf_iterator<char>());
+    const char* compute_source = compute_shader_source.c_str();
     GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
     glShaderSource(compute_shader, 1, &compute_source, nullptr);
     glCompileShader(compute_shader);

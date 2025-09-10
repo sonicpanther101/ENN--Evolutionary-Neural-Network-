@@ -11,13 +11,16 @@
 
 // GPU-aligned struct (std430 layout)
 struct PhysicsObject {
-    glm::vec4 position;     // 16 bytes
-    glm::vec4 velocity;     // 16 bytes
-    glm::vec4 acceleration; // 16 bytes
-    float mass;             // 4 bytes
-    float radius;           // 4 bytes
-    glm::vec2 _pad;        // 8 bytes 
-}; // 64 bytes it must be a multiple of 16 bytes
+    glm::vec4 position;         // 16 bytes
+    glm::vec4 velocity;         // 16 bytes
+    glm::vec4 acceleration;     // 16 bytes
+    float mass;                 // 4 bytes
+    float radius;               // 4 bytes
+    float _pad[2];              // 8 bytes 
+    glm::vec4 newPosition;      // 16 bytes
+    glm::vec4 oldPosition;      // 16 bytes
+    glm::vec4 inertialPosition; // 16 bytes
+}; // 108 bytes it must be a multiple of 16 bytes
 
 struct PhysicsConstraint {
     int type;
@@ -26,7 +29,7 @@ struct PhysicsConstraint {
     float restLength;
     float stiffness; // k_j^(n)
     float lambda; // λ_j^(n)
-    glm::vec2 _pad;
+    float _pad[2];
     // Could also add min/max bounds for inequality constraints
 }; // 32 bytes
 
@@ -49,7 +52,11 @@ public:
     int getConstraintCount() const { return constraint_count; }
 
 private:
-    GLuint compute_shader_program;
+    GLuint initial_compute_shader_program;
+    GLuint object_compute_shader_program;
+    GLuint position_compute_shader_program;
+    GLuint constraint_compute_shader_program;
+    GLuint velocity_compute_shader_program;
     GLuint object_data_buffer;
     GLuint constraint_data_buffer;
     
@@ -64,7 +71,7 @@ private:
     std::vector<glm::vec3> previous_positions; // Stores x from previous frame
     
     void setupBuffers();
-    GLuint loadComputeShader(const char* compute_source);
+    GLuint loadComputeShader(const char* compute_path);
 };
 
 class GPURenderer2D {
