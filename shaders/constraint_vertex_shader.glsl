@@ -6,15 +6,22 @@ struct PhysicsObject {
     vec4 acceleration;
     float mass;
     float radius;
+    float _pad[2];
+    vec4 newPosition;
+    vec4 oldPosition;
+    vec4 inertialPosition;
 };
 
-struct PhysicsConstraint {
+struct Constraint {
     int type;
     int indexA;
     int indexB;
+    int _pad;
     float restLength;
-    float stiffness;
-    float lambda;
+    float lambda; // λ_j^(n)
+    float stiffness; // k_j^(n)
+    float maxStiffness; // k_j^*
+    // Could also add min/max bounds for inequality constraints
 };
 
 layout(std430, binding = 0) readonly buffer ObjectBuffer {
@@ -22,7 +29,7 @@ layout(std430, binding = 0) readonly buffer ObjectBuffer {
 };
 
 layout(std430, binding = 1) readonly buffer ConstraintBuffer {
-    PhysicsConstraint constraints[];
+    Constraint constraints[];
 };
 
 uniform mat4 u_projection;
@@ -30,7 +37,7 @@ uniform mat4 u_projection;
 out float v_stress;
 
 void main() {
-    PhysicsConstraint c = constraints[gl_InstanceID];
+    Constraint c = constraints[gl_InstanceID];
     PhysicsObject a = objects[c.indexA];
     PhysicsObject b = objects[c.indexB];
 

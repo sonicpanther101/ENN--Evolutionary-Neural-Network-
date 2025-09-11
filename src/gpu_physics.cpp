@@ -36,6 +36,9 @@ void PhysicsSystem::setupBuffers() {
 
 void PhysicsSystem::addObject(const PhysicsObject& obj) {
     if (object_count >= max_objects) return;
+
+    // set unset parametres
+    
     
     // Upload entire object to buffer
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, object_data_buffer);
@@ -78,6 +81,7 @@ void PhysicsSystem::update(float dt) {
     // Set uniforms
     glUniform1f(glGetUniformLocation(initial_compute_shader_program, "u_deltaTime"), dt);
     glUniform1f(glGetUniformLocation(object_compute_shader_program, "u_deltaTime"), dt);
+    glUniform1i(glGetUniformLocation(object_compute_shader_program, "u_constraint_count"), getConstraintCount());
     glUniform1f(glGetUniformLocation(velocity_compute_shader_program, "u_deltaTime"), dt);
 
     // set work groups
@@ -152,7 +156,7 @@ GLuint PhysicsSystem::loadComputeShader(const char* compute_path) {
     glGetProgramiv(program, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(program, 512, nullptr, info_log);
-        std::cerr << "Compute shader program linking failed: " << info_log << std::endl;
+        std::cerr << "Compute shader program linking failed: " << info_log << std::string(compute_path) << std::endl;
     }
     
     glDeleteShader(compute_shader);

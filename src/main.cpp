@@ -31,7 +31,6 @@ int main() {
     // Create some balls
     PhysicsObject ball = {};
     ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
-    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
@@ -42,7 +41,6 @@ int main() {
     ball.position = {SCREEN_WIDTH/2.0f, 3.0f*SCREEN_HEIGHT/4.0f, 0.0f, 0.0f};
     ball.velocity = {1.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
-    ball.mass = 1.0f;
     ball.radius = 20.0f;
     
     physics_system.addObject(ball);
@@ -50,15 +48,12 @@ int main() {
     // Ball showing correct path
     ball = {};
     ball.position = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 0.0f};
-    ball.velocity = {0.0f, 0.0f, 0.0f, 0.0f};
-    ball.acceleration = {0.0f, 0.0f, 0.0f, 0.0f}; // gravity
-    ball.mass = 1.0f;
     ball.radius = SCREEN_HEIGHT/4.0f;
     
     physics_system.addObject(ball);
 
     PhysicsConstraint constraint = {};
-    constraint.type = 0;
+    constraint.type = 1;
     constraint.indexA = 0;
     constraint.indexB = 1;
     constraint.restLength = 100.0f;

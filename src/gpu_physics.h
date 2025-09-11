@@ -11,25 +11,26 @@
 
 // GPU-aligned struct (std430 layout)
 struct PhysicsObject {
-    glm::vec4 position;         // 16 bytes
-    glm::vec4 velocity;         // 16 bytes
-    glm::vec4 acceleration;     // 16 bytes
-    float mass;                 // 4 bytes
+    glm::vec4 position;         // 16 bytes  X
+    glm::vec4 velocity;         // 16 bytes  v
+    glm::vec4 acceleration;     // 16 bytes  a_ext
+    float mass;                 // 4 bytes   m
     float radius;               // 4 bytes
     float _pad[2];              // 8 bytes 
-    glm::vec4 newPosition;      // 16 bytes
-    glm::vec4 oldPosition;      // 16 bytes
-    glm::vec4 inertialPosition; // 16 bytes
+    glm::vec4 newPosition;      // 16 bytes  X_new
+    glm::vec4 oldPosition;      // 16 bytes  X^t
+    glm::vec4 inertialPosition; // 16 bytes  Y
 }; // 108 bytes it must be a multiple of 16 bytes
 
 struct PhysicsConstraint {
-    int type;
+    int type;   // 0 soft distance, 1 hard distance
     int indexA;
     int indexB;
+    int _pad;
     float restLength;
-    float stiffness; // k_j^(n)
     float lambda; // λ_j^(n)
-    float _pad[2];
+    float stiffness; // k_j^(n)
+    float maxStiffness; // k_j^*
     // Could also add min/max bounds for inequality constraints
 }; // 32 bytes
 
@@ -67,9 +68,6 @@ private:
     int constraint_count;
     int SCREEN_WIDTH, SCREEN_HEIGHT;
 
-    std::vector<glm::vec3> inertial_positions; // Stores y values
-    std::vector<glm::vec3> previous_positions; // Stores x from previous frame
-    
     void setupBuffers();
     GLuint loadComputeShader(const char* compute_path);
 };

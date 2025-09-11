@@ -5,9 +5,13 @@ layout(location = 0) in vec2 template_pos;
 struct PhysicsObject {
     vec4 position;
     vec4 velocity;
-    vec4 acceleration;  
+    vec4 acceleration;
     float mass;
     float radius;
+    float _pad[2];
+    vec4 newPosition;
+    vec4 oldPosition;
+    vec4 inertialPosition;
 };
 
 layout(std430, binding = 0) restrict readonly buffer ObjectBuffer {
