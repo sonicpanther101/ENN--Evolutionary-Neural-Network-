@@ -46,9 +46,7 @@ void main() {
                                       u_deltaTime * objects[index].velocity + 
                                       u_deltaTime * u_deltaTime * objects[index].acceleration;
 
-    // 4. If this is the first frame (oldPosition == position), initialize oldPosition
-    if (objects[index].oldPosition.x == objects[index].position.x &&
-        objects[index].oldPosition.y == objects[index].position.y) {
-        objects[index].oldPosition = objects[index].position;
-    }
+    // 4. initial guess with adaptive initialization / x
+    objects[index].position = objects[index].inertialPosition;
+    objects[index].oldPosition = objects[index].position; // Save for velocity calculation
 }

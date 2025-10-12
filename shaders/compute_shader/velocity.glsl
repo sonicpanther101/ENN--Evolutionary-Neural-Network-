@@ -26,6 +26,6 @@ void main() {
     if (index >= objects.length() || index == 2) return;
 
     // 37. Update velocity
-    objects[index].velocity = (objects[index].position - objects[index].oldPosition) / u_deltaTime;
+    // objects[index].velocity = (objects[index].position - objects[index].oldPosition) / u_deltaTime;
     objects[index].oldPosition = objects[index].position;
 }

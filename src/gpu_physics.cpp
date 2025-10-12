@@ -114,12 +114,12 @@ void PhysicsSystem::update(float dt) {
             // Memory barrier
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         }
-        // 26. - 35. Dispatch constraint-wise compute shader updating the dual variables and stiffness
-        glUseProgram(constraint_compute_shader_program);
-        glDispatchCompute(constraint_work_groups, 1, 1);
+        // // 26. - 35. Dispatch constraint-wise compute shader updating the dual variables and stiffness
+        // glUseProgram(constraint_compute_shader_program);
+        // glDispatchCompute(constraint_work_groups, 1, 1);
         
-        // Memory barrier
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        // // Memory barrier
+        // glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     // 37. Update velocity

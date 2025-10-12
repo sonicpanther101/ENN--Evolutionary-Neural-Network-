@@ -25,7 +25,7 @@ int main() {
               << work_group_count[1] << ", " << work_group_count[2] << std::endl;
     
     // Initialize GPU physics system
-    PhysicsSystem physics_system(100, 100, 10, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
+    PhysicsSystem physics_system(100, 100, 1, SCREEN_WIDTH, SCREEN_HEIGHT); // Start with fewer objects for testing
     GPURenderer2D renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     
     // Create some balls
