@@ -4,8 +4,8 @@
 #include <chrono>
 #include <iostream>
 
-const int SCREEN_WIDTH = 1600;
-const int SCREEN_HEIGHT = 1200;
+const int SCREEN_WIDTH = 1200;
+const int SCREEN_HEIGHT = 900;
 
 int main() {
     // Initialize window
@@ -30,36 +30,42 @@ int main() {
     
     // Create some balls
     PhysicsObject ball = {};
-    ball.position = {SCREEN_WIDTH/2+SCREEN_HEIGHT/4, SCREEN_HEIGHT/2, 0.0f, 0.0f};
+    ball.position = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 0.0f};
+    ball.velocity = {0.0f, 100.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.mass = 1.0f;
     ball.radius = 20.0f;
+    ball.newPosition = ball.position;       // Initialize!
+    ball.oldPosition = ball.position;       // Initialize!
+    ball.inertialPosition = ball.position;  // Initialize!
     
     physics_system.addObject(ball);
 
     ball = {};
-    ball.position = {SCREEN_WIDTH/2.0f, 3.0f*SCREEN_HEIGHT/4.0f, 0.0f, 0.0f};
-    ball.velocity = {1.0f, 0.0f, 0.0f, 0.0f};// {100.0f*cos(3*M_PI/4.0f), 100.0f*sin(3*M_PI/4.0f), 0.0f, 0.0f};
+    ball.position = {SCREEN_WIDTH/2.0f, SCREEN_HEIGHT/2.0f+100.0f, 0.0f, 0.0f};
+    ball.velocity = {1.0f, 0.0f, 0.0f, 0.0f};
     ball.acceleration = {0.0f, -100.0f, 0.0f, 0.0f}; // gravity
     ball.radius = 20.0f;
     
-    physics_system.addObject(ball);
+    // physics_system.addObject(ball);
 
     // Ball showing correct path
     ball = {};
     ball.position = {SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 0.0f};
     ball.radius = SCREEN_HEIGHT/4.0f;
     
-    physics_system.addObject(ball);
+    // physics_system.addObject(ball);
 
     PhysicsConstraint constraint = {};
     constraint.type = 1;
     constraint.indexA = 0;
     constraint.indexB = 1;
     constraint.restLength = 100.0f;
-    constraint.stiffness = 1.0f;
+    constraint.lambda = 0.0f;      // Initialize!
+    constraint.stiffness = 1.0f;   // k_start
+    constraint.maxStiffness = 1e6f; // For hard constraints
     
-    physics_system.addConstraint(constraint);
+    // physics_system.addConstraint(constraint);
     
     auto last_time = std::chrono::high_resolution_clock::now();
 
@@ -79,7 +85,7 @@ int main() {
         
         // Cap delta time to avoid large jumps
         dt = std::min(dt, 0.033f); // ~30fps minimum
-        
+
         // Update physics on GPU
         physics_system.update(dt);
 
