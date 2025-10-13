@@ -1,7 +1,7 @@
 #include "NN.h"
 
-NN::NN(int INPUT_NODES, int HIDDEN_NODES, int OUTPUT_NODES, int HIDDEN_LAYERS)
-    : INPUT_NODES(INPUT_NODES), HIDDEN_NODES(HIDDEN_NODES), OUTPUT_NODES(OUTPUT_NODES), HIDDEN_LAYERS(HIDDEN_LAYERS) {
+NN::NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES)
+    : INPUT_NODES(INPUT_NODES), HIDDEN_NODES(HIDDEN_NODES), HIDDEN_LAYERS(HIDDEN_LAYERS), OUTPUT_NODES(OUTPUT_NODES) {
 
     // Input to first hidden layer
     weights.push_back(Eigen::MatrixXd::Random(HIDDEN_NODES, INPUT_NODES));
@@ -38,11 +38,17 @@ Eigen::VectorXd NN::Propogate(Eigen::MatrixXd weights, Eigen::VectorXd activatio
     return NN::ReLU(weights*activationValue + biases);
 }
 
-void NN::GetOutput() {
+ Eigen::VectorXd NN::GetOutput() {
 
-    for (int i = 0; i < weights.size(); ++i){
-        
+    hiddenActivationValues[0] = Propogate(weights[0], inputActivationValues, biases[0]);
+
+    for (int i = 0; i < HIDDEN_LAYERS; ++i){
+        hiddenActivationValues[i+1] = Propogate(weights[i+1], hiddenActivationValues[i+1], biases[i+1]);
     }
+
+    outputActivationValues = Propogate(weights[HIDDEN_LAYERS], hiddenActivationValues[HIDDEN_LAYERS], biases[HIDDEN_LAYERS]);
+
+    return outputActivationValues;
 }
 
 double Cost(Eigen::VectorXd outputActivation, Eigen::VectorXd expectedValue) {

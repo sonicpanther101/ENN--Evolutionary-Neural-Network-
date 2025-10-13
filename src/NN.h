@@ -7,7 +7,7 @@
 
 class NN {
 public:
-    NN(int INPUT_NODES, int HIDDEN_NODES, int OUTPUT_NODES, int HIDDEN_LAYERS);
+    NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES);
 
     void SetInputValues(Eigen::VectorXd vector);
 
@@ -15,7 +15,7 @@ public:
 
     Eigen::VectorXd Propogate(Eigen::MatrixXd weights, Eigen::VectorXd activationValue, Eigen::VectorXd biases);
 
-    void GetOutput();
+    Eigen::VectorXd GetOutput();
 
     double Cost(Eigen::VectorXd outputActivation, Eigen::VectorXd expectedValue);
 private:
