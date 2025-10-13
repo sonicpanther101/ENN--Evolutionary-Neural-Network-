@@ -15,11 +15,17 @@ find_package(OpenGL REQUIRED)
 
 add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
+# Eigen
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+add_subdirectory("vendor/eigen" EXCLUDE_FROM_ALL)
+include_directories("vendor/eigen")
+
 # GLFW
 add_subdirectory("vendor/glfw")
 include_directories("vendor/glfw/include")
 
 # GLEW
+set(BUILD_UTILS OFF CACHE BOOL "Disable GLEW utils" FORCE)
 add_subdirectory("vendor/glew-cmake/build/cmake")
 include_directories("vendor/glew-cmake/include")
 
