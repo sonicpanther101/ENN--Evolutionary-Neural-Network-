@@ -13,7 +13,7 @@ public:
 
     Eigen::VectorXd ReLU(Eigen::VectorXd vector);
 
-    Eigen::VectorXd Propogate(Eigen::MatrixXd weights, Eigen::VectorXd activationValue, Eigen::VectorXd biases);
+    Eigen::VectorXd Propagate(Eigen::MatrixXd weights, Eigen::VectorXd activationValue, Eigen::VectorXd biases);
 
     Eigen::VectorXd GetOutput();
 

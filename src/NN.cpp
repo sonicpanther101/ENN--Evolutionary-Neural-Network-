@@ -7,22 +7,36 @@ NN::NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES)
     weights.push_back(Eigen::MatrixXd::Random(HIDDEN_NODES, INPUT_NODES));
     biases.push_back(Eigen::VectorXd::Random(HIDDEN_NODES));
 
+    Eigen::VectorXd placeholder(1);
+    hiddenActivationValues.push_back(placeholder);
+
     // Hidden layer connections
     for (int i = 1; i < HIDDEN_LAYERS; ++i) {
         weights.push_back(Eigen::MatrixXd::Random(HIDDEN_NODES, HIDDEN_NODES));
         biases.push_back(Eigen::VectorXd::Random(HIDDEN_NODES));
+        hiddenActivationValues.push_back(placeholder);
     }
 
     // Last hidden to output
     weights.push_back(Eigen::MatrixXd::Random(OUTPUT_NODES, HIDDEN_NODES));
     biases.push_back(Eigen::VectorXd::Random(OUTPUT_NODES));
+
+    std::cout << "Weights matrices: " << weights.size() << std::endl;
+    std::cout << "Biases vectors: " << biases.size() << std::endl;
+    std::cout << "hidden activation value vector: " << hiddenActivationValues.size() << std::endl;
+
+    std::cout << "Initialised" << std::endl;
 }
 
 void NN::SetInputValues(Eigen::VectorXd input) {
     inputActivationValues = input;
+
+    std::cout << "Inputs set" << std::endl;
 }
 
 Eigen::VectorXd NN::ReLU(Eigen::VectorXd vector) {
+
+    std::cout << "Applying ReLU" << std::endl;
 
     Eigen::VectorXd output(vector.size());
 
@@ -30,23 +44,32 @@ Eigen::VectorXd NN::ReLU(Eigen::VectorXd vector) {
         output(i) = std::max(vector(i), 0.0);
     }
 
+    std::cout << "Done ReLU" << std::endl;
+
     return output;
 }
 
-Eigen::VectorXd NN::Propogate(Eigen::MatrixXd weights, Eigen::VectorXd activationValue, Eigen::VectorXd biases) {
+Eigen::VectorXd NN::Propagate(Eigen::MatrixXd weights, Eigen::VectorXd activationValue, Eigen::VectorXd biases) {
+    std::cout << "Propagating" << std::endl;
 
-    return NN::ReLU(weights*activationValue + biases);
+    Eigen::VectorXd newActivationValues = weights*activationValue + biases;
+
+    std::cout << "new values found" << std::endl;
+
+    return NN::ReLU(newActivationValues);
 }
 
  Eigen::VectorXd NN::GetOutput() {
 
-    hiddenActivationValues[0] = Propogate(weights[0], inputActivationValues, biases[0]);
+    hiddenActivationValues[0] = Propagate(weights[0], inputActivationValues, biases[0]);
 
-    for (int i = 0; i < HIDDEN_LAYERS; ++i){
-        hiddenActivationValues[i+1] = Propogate(weights[i+1], hiddenActivationValues[i+1], biases[i+1]);
+    for (int i = 1; i < HIDDEN_LAYERS; ++i){
+        hiddenActivationValues[i] = Propagate(weights[i], hiddenActivationValues[i-1], biases[i]);
     }
 
-    outputActivationValues = Propogate(weights[HIDDEN_LAYERS], hiddenActivationValues[HIDDEN_LAYERS], biases[HIDDEN_LAYERS]);
+    outputActivationValues = Propagate(weights[HIDDEN_LAYERS], hiddenActivationValues[HIDDEN_LAYERS - 1], biases[HIDDEN_LAYERS]);
+
+    std::cout << "Output layer propagated" << std::endl;
 
     return outputActivationValues;
 }

@@ -18,7 +18,7 @@ int main() {
 
     Eigen::VectorXd output = NN.GetOutput();
 
-    std::cout << output << std::endl;
+    std::cout << "Output Values: " << output << std::endl;
     
     return 0;
 }
