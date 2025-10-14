@@ -7,7 +7,7 @@
 
 class NN {
 public:
-    NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES);
+    NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES, double LEARNING_RATE);
 
     void SetInputValues(Eigen::VectorXd vector);
 
@@ -17,12 +17,16 @@ public:
 
     Eigen::VectorXd GetOutput();
 
-    double Cost(Eigen::VectorXd outputActivation, Eigen::VectorXd expectedValue);
+    // Δwij =η×δj×Oj
+    double Cost(double outputValue, double expectedValue);
+
+    void AdjustWeights(Eigen::VectorXd expectedOutput);
 private:
     int INPUT_NODES;
     int HIDDEN_NODES;
     int OUTPUT_NODES;
     int HIDDEN_LAYERS;
+    double LEARNING_RATE;
 
     Eigen::VectorXd inputActivationValues;
     std::vector<Eigen::VectorXd> hiddenActivationValues;

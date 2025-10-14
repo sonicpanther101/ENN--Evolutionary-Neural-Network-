@@ -1,7 +1,8 @@
 #include "NN.h"
+#include "Eigen/src/Core/Matrix.h"
 
-NN::NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES)
-    : INPUT_NODES(INPUT_NODES), HIDDEN_NODES(HIDDEN_NODES), HIDDEN_LAYERS(HIDDEN_LAYERS), OUTPUT_NODES(OUTPUT_NODES) {
+NN::NN(int INPUT_NODES, int HIDDEN_NODES, int HIDDEN_LAYERS, int OUTPUT_NODES, double LEARNING_RATE)
+    : INPUT_NODES(INPUT_NODES), HIDDEN_NODES(HIDDEN_NODES), HIDDEN_LAYERS(HIDDEN_LAYERS), OUTPUT_NODES(OUTPUT_NODES), LEARNING_RATE(LEARNING_RATE) {
 
     // Input to first hidden layer
     weights.push_back(Eigen::MatrixXd::Random(HIDDEN_NODES, INPUT_NODES));
@@ -87,4 +88,28 @@ double Cost(Eigen::VectorXd outputActivation, Eigen::VectorXd expectedValue) {
     }
 
     return totalError;
+}
+
+void NN::AdjustWeights(Eigen::VectorXd expectedOutput) {
+
+    Eigen::MatrixXd deltaWeights = Eigen::MatrixXd::Zero(HIDDEN_NODES, HIDDEN_NODES);
+    std::vector<Eigen::VectorXd> errorCum;
+
+    Eigen::VectorXd error = outputActivationValues.cwiseProduct(
+        (Eigen::VectorXd::Ones(outputActivationValues.size()) - outputActivationValues)).cwiseProduct(
+            expectedOutput - outputActivationValues);
+
+    weights[HIDDEN_LAYERS] = LEARNING_RATE * error.cwiseProduct(outputActivationValues);
+
+    errorCum.push_back(error);
+
+    for (int i = weights.size()-1; i > 0; --i) {
+        Eigen::VectorXd error = hiddenActivationValues[i].cwiseProduct(
+            Eigen::VectorXd::Ones(hiddenActivationValues[i].size()) - hiddenActivationValues[i]).cwiseProduct(
+                weights[i].cwiseProduct(errorCum[weights.size()-i]));
+
+        weights[i] += LEARNING_RATE * error.cwiseProduct(hiddenActivationValues[i]);
+
+        errorCum.push_back(error);
+    }
 }
